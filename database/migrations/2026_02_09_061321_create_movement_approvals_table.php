@@ -13,6 +13,25 @@ return new class extends Migration
     {
         Schema::create('movement_approvals', function (Blueprint $table) {
             $table->id();
+
+            $table->foreignId('stock_movement_id')
+                  ->constrained()
+                  ->cascadeOnDelete();
+
+            $table->enum('status', [
+                'PENDING',
+                'APPROVED',
+                'REJECTED'
+            ])->default('PENDING');
+
+            $table->foreignId('approved_by')
+                  ->nullable()
+                  ->references('id')->on('users')
+                  ->nullOnDelete();
+
+            $table->timestamp('approved_at')->nullable();
+            $table->text('remarks')->nullable();
+
             $table->timestamps();
         });
     }
