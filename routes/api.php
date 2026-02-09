@@ -35,4 +35,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Barcode printing
     Route::post('/batches/{batch}/print', [BarcodePrintController::class, 'print']);
+        // Batches
+    Route::post('/batches', [BatchController::class, 'store']);
+
+    // Barcode generation
+    Route::post('/barcodes', [BarcodeController::class, 'store']);
+
+    // Barcode lookup (scan / manual)
+    Route::get('/barcodes/{code}', [BarcodeController::class, 'showByCode']);
 });
