@@ -3,25 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BarcodePrintLog extends Model
 {
     protected $fillable = [
-        'batch_id',
+        'barcode_id',
         'printed_by',
-        'copies',
-        'printer_name',
-        'reason',
         'printed_at'
     ];
 
-    public function batch()
-    {
-        return $this->belongsTo(Batch::class);
-    }
+    protected $casts = [
+        'printed_at' => 'datetime'
+    ];
 
-    public function user()
+    public function barcode(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'printed_by');
+        return $this->belongsTo(Barcode::class);
     }
 }
