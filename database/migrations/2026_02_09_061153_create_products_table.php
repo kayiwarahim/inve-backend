@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('sku')->unique();
             $table->string('name');
-            $table->string('unit_of_measure'); // bags, kg, pcs, liters
+            $table->string('unit'); // bags, kg, pcs, liters
             $table->text('description')->nullable();
             $table->timestamps();
         });

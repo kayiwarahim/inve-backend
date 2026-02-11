@@ -2,9 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\PasswordOtpController;
+use App\Http\Controllers\Api\ProductController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\Inventory\{
-    ProductController,
     BatchController,
     BarcodeController,
     StockMovementController,
@@ -15,6 +17,20 @@ use App\Http\Controllers\Inventory\{
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/password/otp/request', [PasswordOtpController::class, 'requestOtp']);
+Route::post('/password/otp/verify', [PasswordOtpController::class, 'verifyOtp']);
+Route::post('/password/otp/reset', [PasswordOtpController::class, 'resetPassword']);
+Route::get('/test-mail', function () {
+    Mail::raw('Test email', function ($message) {
+        $message->to('kayiwarahim@gmail.com')
+                ->subject('Test Mail');
+    });
+});
+
+
+
+
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -22,10 +38,11 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
+    Route::apiResource('products', ProductController::class);
     // Products & batches
-    Route::get('/products', [ProductController::class, 'index']);
-    Route::post('/products', [ProductController::class, 'store']);
-    Route::post('/batches', [BatchController::class, 'store']);
+    // Route::get('/products', [ProductController::class, 'index']);
+    // Route::post('/products', [ProductController::class, 'store']);
+    // Route::post('/batches', [BatchController::class, 'store']);
 
     // Barcode scan
     Route::get('/scan/{barcode}', [BarcodeController::class, 'scan']);
