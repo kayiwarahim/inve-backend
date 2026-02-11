@@ -4,10 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PasswordOtpController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\BatchController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\Inventory\{
-    BatchController,
     BarcodeController,
     StockMovementController,
     StockLevelController,
@@ -39,10 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::apiResource('products', ProductController::class);
-    // Products & batches
-    // Route::get('/products', [ProductController::class, 'index']);
-    // Route::post('/products', [ProductController::class, 'store']);
-    // Route::post('/batches', [BatchController::class, 'store']);
+    Route::apiResource('batches', BatchController::class);
 
     // Barcode scan
     Route::get('/scan/{barcode}', [BarcodeController::class, 'scan']);
@@ -62,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Barcode printing
     Route::post('/batches/{batch}/print', [BarcodePrintController::class, 'print']);
         // Batches
-    Route::post('/batches', [BatchController::class, 'store']);
+    //Route::post('/batches', [BatchController::class, 'store']);
 
     // Barcode generation
     Route::post('/barcodes', [BarcodeController::class, 'store']);
