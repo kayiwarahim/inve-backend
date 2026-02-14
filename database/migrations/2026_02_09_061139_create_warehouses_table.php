@@ -13,15 +13,10 @@ return new class extends Migration
     {
         Schema::create('warehouses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('branch_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
-
+            $table->foreignId('branch_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->string('code')->unique();
-            $table->enum('type', ['storage', 'transit', 'quarantine'])
-                  ->default('storage');
-
+            $table->enum('type', ['storage', 'transit', 'quarantine'])->default('storage');
             $table->timestamps();
         });
     }
