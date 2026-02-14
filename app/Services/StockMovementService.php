@@ -5,35 +5,45 @@ namespace App\Services;
 use App\Models\StockMovement;
 use App\Models\MovementApproval;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Exception;
 
 class StockMovementService
 {
+    protected StockLevelService $stockLevelService;
+
+    public function __construct(StockLevelService $stockLevelService)
+    {
+        $this->stockLevelService = $stockLevelService;
+    }
+
     /**
-     * Stock IN (production / receiving)
+     * STOCK IN (production / receiving)
      */
     public function stockIn(array $data): StockMovement
     {
         return DB::transaction(function () use ($data) {
 
             $movement = StockMovement::create([
-                'batch_id'        => $data['batch_id'],
-                'to_warehouse_id'=> $data['to_warehouse_id'],
-                'movement_type'  => 'IN',
-                'quantity'       => $data['quantity'],
-                'performed_by'   => auth()->id(),
-                'performed_at'   => Carbon::now(),
-                'remarks'        => $data['remarks'] ?? null,
+                'batch_id'           => $data['batch_id'],
+                'to_warehouse_id'    => $data['to_warehouse_id'],
+                'movement_type'      => 'IN',
+                'quantity'           => $data['quantity'],
+                'created_by'         => Auth::id(),
+                'performed_at'       => Carbon::now(),
+                'remarks'            => $data['remarks'] ?? null,
             ]);
 
-            $this->createApprovalIfRequired($movement);
+            // IN movements usually don't need approval
+            $this->applyMovementIfApproved($movement);
 
             return $movement;
         });
     }
 
     /**
-     * Stock OUT
+     * STOCK OUT
      */
     public function stockOut(array $data): StockMovement
     {
@@ -46,23 +56,23 @@ class StockMovementService
             );
 
             $movement = StockMovement::create([
-                'batch_id'         => $data['batch_id'],
-                'from_warehouse_id'=> $data['from_warehouse_id'],
-                'movement_type'   => 'OUT',
-                'quantity'        => $data['quantity'],
-                'performed_by'    => auth()->id(),
-                'performed_at'    => Carbon::now(),
-                'remarks'         => $data['remarks'] ?? null,
+                'batch_id'           => $data['batch_id'],
+                'from_warehouse_id'  => $data['from_warehouse_id'],
+                'movement_type'      => 'OUT',
+                'quantity'           => $data['quantity'],
+                'created_by'         => Auth::id(),
+                'performed_at'       => Carbon::now(),
+                'remarks'            => $data['remarks'] ?? null,
             ]);
 
-            $this->createApprovalIfRequired($movement);
+            $this->handleApprovalFlow($movement);
 
             return $movement;
         });
     }
 
     /**
-     * Warehouse Transfer
+     * TRANSFER BETWEEN WAREHOUSES
      */
     public function transfer(array $data): StockMovement
     {
@@ -75,57 +85,86 @@ class StockMovementService
             );
 
             $movement = StockMovement::create([
-                'batch_id'          => $data['batch_id'],
-                'from_warehouse_id'=> $data['from_warehouse_id'],
-                'to_warehouse_id'  => $data['to_warehouse_id'],
-                'movement_type'    => 'TRANSFER',
-                'quantity'         => $data['quantity'],
-                'performed_by'     => auth()->id(),
-                'performed_at'     => Carbon::now(),
-                'remarks'          => $data['remarks'] ?? null,
+                'batch_id'           => $data['batch_id'],
+                'from_warehouse_id'  => $data['from_warehouse_id'],
+                'to_warehouse_id'    => $data['to_warehouse_id'],
+                'movement_type'      => 'TRANSFER',
+                'quantity'           => $data['quantity'],
+                'created_by'         => Auth::id(),
+                'performed_at'       => Carbon::now(),
+                'remarks'            => $data['remarks'] ?? null,
             ]);
 
-            $this->createApprovalIfRequired($movement);
+            $this->handleApprovalFlow($movement);
 
             return $movement;
         });
     }
 
     /**
-     * Prevent negative stock
+     * Check available stock before OUT / TRANSFER
      */
     protected function ensureSufficientStock(
         int $batchId,
         int $warehouseId,
         float $quantity
     ): void {
-        $available = app(StockLevelService::class)
+        $available = $this->stockLevelService
             ->getWarehouseBatchStock($warehouseId, $batchId);
 
         if ($available < $quantity) {
-            throw new \Exception('Insufficient stock available.');
+            throw new Exception('Insufficient stock available.');
         }
     }
 
     /**
-     * Approval logic hook
+     * Approval workflow entry point
      */
-    protected function createApprovalIfRequired(StockMovement $movement): void
+    protected function handleApprovalFlow(StockMovement $movement): void
     {
         if ($this->requiresApproval($movement)) {
             MovementApproval::create([
                 'stock_movement_id' => $movement->id,
                 'status' => 'PENDING'
             ]);
+        } else {
+            $this->applyMovementIfApproved($movement);
         }
     }
 
     /**
-     * Approval rules
+     * Apply stock movement immediately (no approval required)
+     */
+    protected function applyMovementIfApproved(StockMovement $movement): void
+    {
+        match ($movement->movement_type) {
+            'IN' => $this->stockLevelService->increase(
+                $movement->to_warehouse_id,
+                $movement->batch_id,
+                $movement->quantity
+            ),
+
+            'OUT' => $this->stockLevelService->decrease(
+                $movement->from_warehouse_id,
+                $movement->batch_id,
+                $movement->quantity
+            ),
+
+            'TRANSFER' => $this->stockLevelService->transfer(
+                $movement->from_warehouse_id,
+                $movement->to_warehouse_id,
+                $movement->batch_id,
+                $movement->quantity
+            ),
+        };
+    }
+
+    /**
+     * Approval rules (configurable)
      */
     protected function requiresApproval(StockMovement $movement): bool
     {
         return in_array($movement->movement_type, ['OUT', 'TRANSFER'])
-            && $movement->quantity > 100; // configurable rule
+            && $movement->quantity > 100;
     }
 }

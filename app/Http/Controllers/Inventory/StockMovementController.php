@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Inventory;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\Inventory\StockMovementService;
+use App\Services\StockMovementService;
 use Illuminate\Http\Request;
 
 class StockMovementController extends Controller

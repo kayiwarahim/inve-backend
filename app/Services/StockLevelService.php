@@ -7,6 +7,7 @@ use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockSnapshot;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use Exception;
 
 class StockLevelService
@@ -149,5 +150,87 @@ class StockLevelService
                 ]);
             }
         }
+    }
+
+    /**
+     * Get current stock of a batch in a warehouse
+     */
+    public function getWarehouseBatchStock(
+        int $warehouseId,
+        int $batchId
+    ): float {
+        return StockSnapshot::where('warehouse_id', $warehouseId)
+            ->where('batch_id', $batchId)
+            ->value('quantity') ?? 0;
+    }
+
+    /**
+     * Increase stock (Stock IN)
+     */
+    public function increase(
+        int $warehouseId,
+        int $batchId,
+        float $quantity
+    ): void {
+        $this->updateSnapshot(
+            $warehouseId,
+            $batchId,
+            $quantity
+        );
+    }
+
+    /**
+     * Decrease stock (Stock OUT)
+     */
+    public function decrease(
+        int $warehouseId,
+        int $batchId,
+        float $quantity
+    ): void {
+        $this->updateSnapshot(
+            $warehouseId,
+            $batchId,
+            -$quantity
+        );
+    }
+
+    /**
+     * Transfer stock between warehouses
+     */
+    public function transfer(
+        int $fromWarehouseId,
+        int $toWarehouseId,
+        int $batchId,
+        float $quantity
+    ): void {
+        DB::transaction(function () use (
+            $fromWarehouseId,
+            $toWarehouseId,
+            $batchId,
+            $quantity
+        ) {
+            $this->decrease($fromWarehouseId, $batchId, $quantity);
+            $this->increase($toWarehouseId, $batchId, $quantity);
+        });
+    }
+
+    /**
+     * Update or create snapshot atomically
+     */
+    protected function updateSnapshot(
+        int $warehouseId,
+        int $batchId,
+        float $delta
+    ): void {
+        StockSnapshot::updateOrCreate(
+            [
+                'warehouse_id' => $warehouseId,
+                'batch_id'     => $batchId,
+            ],
+            [
+                'quantity'     => DB::raw("quantity + ($delta)"),
+                'updated_at'   => Carbon::now(),
+            ]
+        );
     }
 }

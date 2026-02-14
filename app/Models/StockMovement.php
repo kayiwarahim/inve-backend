@@ -9,17 +9,17 @@ class StockMovement extends Model
 {
     protected $fillable = [
         'batch_id',
+        'movement_type',
         'from_warehouse_id',
         'to_warehouse_id',
         'quantity',
-        'movement_type',
+        'remarks',
         'status',
-        'reference',
         'created_by'
     ];
 
     protected $casts = [
-        'quantity' => 'integer'
+        'quantity' => 'decimal:3',
     ];
 
     public function batch(): BelongsTo

@@ -13,32 +13,17 @@ return new class extends Migration
     {
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('batch_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('from_warehouse_id')
-                  ->nullable()
-                  ->constrained('warehouses')
-                  ->nullOnDelete();
-            $table->foreignId('to_warehouse_id')
-                  ->nullable()
-                  ->constrained('warehouses')
-                  ->nullOnDelete();
-            $table->enum('movement_type', [
-                'IN',
-                'OUT',
-                'TRANSFER',
-                'ADJUSTMENT',
-            ]);
-            $table->decimal('quantity', 15, 3);
-            $table->foreignId('performed_by')
-                  ->nullable()
-                  ->constrained('users')
-                  ->nullOnDelete();
-            $table->string('reference_no')->nullable();
+            $table->foreignId('batch_id')->constrained();
+            $table->foreignId('from_warehouse_id')->nullable()->constrained('warehouses');
+            $table->foreignId('to_warehouse_id')->nullable()->constrained('warehouses');
+            $table->enum('movement_type', ['IN', 'OUT', 'TRANSFER']);
+            $table->decimal('quantity', 12, 3);
+            $table->string('status')->default('pending');
             $table->text('remarks')->nullable();
-            $table->timestamp('performed_at');
+            $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
-            $table->index(['batch_id', 'movement_type']);
         });
+
     }
 
     /**
