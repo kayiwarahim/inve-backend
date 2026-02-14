@@ -13,28 +13,33 @@ return new class extends Migration
     {
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
+
             $table->foreignId('batch_id')
                   ->constrained()
                   ->cascadeOnDelete();
+
             $table->foreignId('from_warehouse_id')
                   ->nullable()
-                  ->references('id')->on('warehouses')
+                  ->constrained('warehouses')
                   ->nullOnDelete();
+
             $table->foreignId('to_warehouse_id')
                   ->nullable()
-                  ->references('id')->on('warehouses')
+                  ->constrained('warehouses')
                   ->nullOnDelete();
+
             $table->enum('movement_type', [
                 'IN',
                 'OUT',
                 'TRANSFER',
-                'ADJUSTMENT'
+                'ADJUSTMENT',
             ]);
 
             $table->decimal('quantity', 15, 3);
 
             $table->foreignId('performed_by')
-                  ->references('id')->on('users')
+                  ->nullable()
+                  ->constrained('users')
                   ->nullOnDelete();
 
             $table->string('reference_no')->nullable();
