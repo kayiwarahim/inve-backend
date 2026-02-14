@@ -27,11 +27,6 @@ Route::get('/test-mail', function () {
     });
 });
 
-
-
-
-
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', function (Request $request) {
@@ -58,24 +53,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Barcode printing
     Route::post('/batches/{batch}/print', [BarcodePrintController::class, 'print']);
-        // Batches
-    //Route::post('/batches', [BatchController::class, 'store']);
 
     // Barcode generation
     Route::post('/barcodes', [BarcodeController::class, 'store']);
 
     // Barcode lookup (scan / manual)
     Route::get('/barcodes/{code}', [BarcodeController::class, 'showByCode']);
-});
-
-
-
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', function (Request $request) {
-        return $request->user();
-    });
 });

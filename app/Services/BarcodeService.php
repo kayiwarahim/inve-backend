@@ -11,7 +11,7 @@ use Exception;
 class BarcodeService
 {
     /**
-     * Create barcode for a batch
+     * Generate barcode for a batch
      */
     public function generateForBatch(Batch $batch): Barcode
     {
@@ -42,7 +42,7 @@ class BarcodeService
     }
 
     /**
-     * Generate unique batch barcode string
+     * Build unique barcode string
      */
     protected function generateBatchCode(Batch $batch): string
     {

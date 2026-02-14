@@ -1,7 +1,7 @@
 <?php
 
 
-namespace App\Services\Inventory;
+namespace App\Services;
 
 use App\Models\Stock;
 use App\Models\StockMovement;

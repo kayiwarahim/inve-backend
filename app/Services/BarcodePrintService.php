@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Inventory;
+namespace App\Services;
 
 use App\Models\Batch;
 use App\Models\BarcodePrintLog;
