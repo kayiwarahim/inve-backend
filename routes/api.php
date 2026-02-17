@@ -9,11 +9,13 @@ use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\MovementApprovalController;
 use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\StockLevelController;
+use App\Http\Controllers\Api\ScanController;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\Inventory\{
     BarcodeController,
-    StockLevelController,
     BarcodePrintController
 };
 
@@ -34,12 +36,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', function (Request $request) {
         return $request->user();
     });
-
     Route::apiResource('products', ProductController::class);
     Route::apiResource('batches', BatchController::class);
     Route::apiResource('warehouses', WarehouseController::class);
     Route::apiResource('branches', BranchController::class);
-
     // Stock movements
     Route::post('/stock/in', [StockMovementController::class, 'stockIn']);
     Route::post('/stock/out', [StockMovementController::class, 'stockOut']);
@@ -47,12 +47,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Approvals
     Route::post('movement-approvals/{id}/approve', [MovementApprovalController::class, 'approve']);
     Route::post('movement-approvals/{id}/reject', [MovementApprovalController::class, 'reject']);
+   // Barcode scan
+    Route::get('scan/{code}', [ScanController::class, 'scan']);
 
 
 
 
-    // Barcode scan
-    Route::get('/scan/{barcode}', [BarcodeController::class, 'scan']);
+
+ 
     // Stock levels
     Route::get('/stock-levels', [StockLevelController::class, 'index']);
     // Barcode printing
