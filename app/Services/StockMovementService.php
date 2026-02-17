@@ -137,27 +137,13 @@ class StockMovementService
      */
     protected function applyMovementIfApproved(StockMovement $movement): void
     {
-        match ($movement->movement_type) {
-            'IN' => $this->stockLevelService->increase(
-                $movement->to_warehouse_id,
-                $movement->batch_id,
-                $movement->quantity
-            ),
+        // mark movement as approved
+        $movement->update(['status' => 'approved']);
 
-            'OUT' => $this->stockLevelService->decrease(
-                $movement->from_warehouse_id,
-                $movement->batch_id,
-                $movement->quantity
-            ),
-
-            'TRANSFER' => $this->stockLevelService->transfer(
-                $movement->from_warehouse_id,
-                $movement->to_warehouse_id,
-                $movement->batch_id,
-                $movement->quantity
-            ),
-        };
+        // apply stock change centrally
+        $this->stockLevelService->applyMovement($movement);
     }
+
 
     /**
      * Approval rules (configurable)
