@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use App\Services\BarcodeService;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class BatchController extends Controller
 {
@@ -95,5 +97,31 @@ class BatchController extends Controller
             'message' => 'Batch deleted successfully'
         ], 200);
     }
+
+
+
+    public function printBarcode($id)
+    {
+        $batch = Batch::with('product', 'barcode')->findOrFail($id);
+
+        $generator = new BarcodeGeneratorPNG();
+
+        $barcodeBase64 = base64_encode(
+            $generator->getBarcode(
+                $batch->barcode->code,
+                $generator::TYPE_CODE_128,
+                2,   // width factor
+                60   // height
+            )
+        );
+
+        $pdf = Pdf::loadView('pdf.batch-barcode', [
+            'batch' => $batch,
+            'barcode' => $barcodeBase64
+        ])->setPaper([0, 0, 300, 200]); // label size (optional)
+
+        return $pdf->stream('batch-barcode-'.$batch->batch_code.'.pdf');
+    }
+
 }
 

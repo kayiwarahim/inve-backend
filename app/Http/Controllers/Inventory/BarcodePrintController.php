@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Inventory;
 
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
-use App\Services\Inventory\BarcodePrintService;
+use App\Services\BarcodePrintService;
 use Illuminate\Http\Request;
 
 class BarcodePrintController extends Controller

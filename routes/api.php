@@ -47,8 +47,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Approvals
     Route::post('movement-approvals/{id}/approve', [MovementApprovalController::class, 'approve']);
     Route::post('movement-approvals/{id}/reject', [MovementApprovalController::class, 'reject']);
-   // Barcode scan
+    // Barcode scan
     Route::get('scan/{code}', [ScanController::class, 'scan']);
+    // Barcode printing
+    Route::get('/batches/{id}/print-barcode', [BatchController::class, 'printBarcode']);
+
 
 
 
