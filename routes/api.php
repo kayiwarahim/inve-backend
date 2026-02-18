@@ -59,7 +59,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
  
     // Stock levels
-    Route::get('/stock-levels', [StockLevelController::class, 'index']);
+    Route::prefix('stock-levels')->group(function () {
+        Route::get('/', [StockLevelController::class, 'index']);
+        Route::get('/warehouse/{warehouseId}/batch/{batchId}', [StockLevelController::class, 'show']);
+        Route::get('/scan/{barcode}', [StockLevelController::class, 'scan']);
+    });
+
     // Barcode printing
     Route::post('/batches/{batch}/print', [BarcodePrintController::class, 'print']);
     // Barcode generation

@@ -98,8 +98,6 @@ class BatchController extends Controller
         ], 200);
     }
 
-
-
     public function printBarcode($id)
     {
         $batch = Batch::with('product', 'barcode')->findOrFail($id);
