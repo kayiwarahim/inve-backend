@@ -11,7 +11,7 @@ use Exception;
 class StockLevelService
 {
     /**
-     * Apply an approved stock movement
+     * Apply approved movement
      */
     public function applyMovement(StockMovement $movement): void
     {
@@ -28,14 +28,11 @@ class StockLevelService
                 default    => throw new Exception('Invalid movement type.')
             };
 
-            // snapshots are created AFTER stock changes
+            // snapshot is reporting only
             $this->createSnapshot($movement);
         });
     }
 
-    /**
-     * STOCK IN
-     */
     protected function handleInbound(StockMovement $movement): void
     {
         $stock = $this->getStockForUpdate(
@@ -46,9 +43,6 @@ class StockLevelService
         $stock->increment('quantity', $movement->quantity);
     }
 
-    /**
-     * STOCK OUT
-     */
     protected function handleOutbound(StockMovement $movement): void
     {
         $stock = $this->getStockForUpdate(
@@ -61,9 +55,6 @@ class StockLevelService
         $stock->decrement('quantity', $movement->quantity);
     }
 
-    /**
-     * TRANSFER between warehouses
-     */
     protected function handleTransfer(StockMovement $movement): void
     {
         $fromStock = $this->getStockForUpdate(
@@ -82,9 +73,6 @@ class StockLevelService
         $toStock->increment('quantity', $movement->quantity);
     }
 
-    /**
-     * Lock stock row or create it
-     */
     protected function getStockForUpdate(int $warehouseId, int $batchId): Stock
     {
         return Stock::where('warehouse_id', $warehouseId)
@@ -96,9 +84,6 @@ class StockLevelService
             );
     }
 
-    /**
-     * Ensure sufficient stock
-     */
     protected function ensureSufficientStock(Stock $stock, float $qty): void
     {
         if ($stock->quantity < $qty) {
@@ -107,7 +92,8 @@ class StockLevelService
     }
 
     /**
-     * Snapshot AFTER movement (reporting only)
+     * Snapshot for reporting only
+     * One per day per warehouse/batch
      */
     protected function createSnapshot(StockMovement $movement): void
     {
@@ -117,23 +103,30 @@ class StockLevelService
         ]);
 
         foreach ($warehouseIds as $warehouseId) {
+
             $stock = Stock::where('warehouse_id', $warehouseId)
                 ->where('batch_id', $movement->batch_id)
                 ->first();
 
-            if ($stock) {
-                StockSnapshot::create([
+            if (!$stock) {
+                continue;
+            }
+
+            StockSnapshot::updateOrCreate(
+                [
                     'warehouse_id'  => $warehouseId,
                     'batch_id'      => $movement->batch_id,
-                    'quantity'      => $stock->quantity,
                     'snapshot_date' => now()->toDateString(),
-                ]);
-            }
+                ],
+                [
+                    'quantity' => $stock->quantity,
+                ]
+            );
         }
     }
 
     /**
-     * Current stock of batch in warehouse (SOURCE OF TRUTH)
+     * SOURCE OF TRUTH
      */
     public function getWarehouseBatchStock(
         int $warehouseId,

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Barcode;
-use App\Models\StockSnapshot;
+use App\Models\Stock;
 use App\Services\StockLevelService;
 use Illuminate\Http\Request;
 
@@ -18,7 +18,7 @@ class StockLevelController extends Controller
      */
     public function index(Request $request)
     {
-        $query = StockSnapshot::with([
+        $query = Stock::with([
             'warehouse',
             'batch.product'
         ]);
@@ -38,7 +38,6 @@ class StockLevelController extends Controller
 
     /**
      * GET /api/stock-levels/warehouse/{warehouseId}/batch/{batchId}
-     * Get current stock for a batch in a warehouse
      */
     public function show(
         int $warehouseId,
@@ -56,11 +55,7 @@ class StockLevelController extends Controller
     }
 
     /**
-     * GET /api/stock-levels/scan/{barcode}
-     * Scan barcode and return:
-     *  - batch
-     *  - product
-     *  - where it is currently stored
+     * Scan barcode and return LIVE location
      */
     public function scan(string $barcode)
     {
@@ -68,7 +63,7 @@ class StockLevelController extends Controller
             ->where('code', $barcode)
             ->firstOrFail();
 
-        $locations = StockSnapshot::with('warehouse')
+        $locations = Stock::with('warehouse')
             ->where('batch_id', $barcode->batch_id)
             ->where('quantity', '>', 0)
             ->get();
