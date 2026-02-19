@@ -4,101 +4,133 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
-use App\Services\BarcodeService;
+use App\Models\Barcode;
 use Illuminate\Http\Request;
+use App\Services\BarcodeService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class BatchController extends Controller
 {
-    /**
-     * GET /api/batches
-     */
     public function index()
     {
-        return response()->json(
-            Batch::with('product', 'barcode')->get(),
-            200
-        );
+        return Batch::with('product')->get();
     }
 
-    /**
-     * POST /api/batches
-     * Create batch + barcode
-     */
     public function store(Request $request, BarcodeService $barcodeService)
     {
-        $data = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'manufactured_at' => 'required|date',
-            'expires_at' => 'nullable|date'
-        ]);
+        $batch = DB::transaction(function () use ($request, $barcodeService) {
 
-        $batch = Batch::create([
-            'product_id' => $data['product_id'],
-            'batch_code' => 'B-' . now()->format('Ymd-His'),
-            'manufactured_at' => $data['manufactured_at'],
-            'expires_at' => $data['expires_at'] ?? null
-        ]);
+            $batch = Batch::create([
+                'product_id'     => $request->product_id,
+                'batch_code'     => $this->generateBatchCode(),
+                'manufactured_at'=> $request->manufactured_at,
+                'expires_at'     => $request->expires_at,
+            ]);
 
+            $batch->batchStocks()->create([
+                'warehouse_id' => $request->warehouse_id,
+                'quantity'     => $request->quantity,
+            ]);
 
-        $barcode = $barcodeService->generateForBatch($batch);
+            $batch->stockTransactions()->create([
+                'type'            => 'in',
+                'quantity'        => $request->quantity,
+                'to_warehouse_id' => $request->warehouse_id,
+                'reason'          => 'Initial receipt',
+                'user_id'         => Auth::id(),
+            ]);
+
+            // Generate barcode
+            $barcodeService->generateForBatch($batch->fresh('product'));
+
+            return $batch;
+        });
+
+        $batch->load('barcode');
 
         return response()->json([
             'message' => 'Batch and barcode created successfully',
-            'batch' => $batch->load('product'),
+            'batch' => $batch,
             'barcode' => [
-                'code' => $barcode->code,
-                'image_url' => asset('storage/barcodes/' . $barcode->code . '.png')
+                'code' => $batch->barcode->code,
+                'image_url' => asset('storage/barcodes/' . $batch->barcode->code . '.png'),
             ]
         ], 200);
     }
 
-    /**
-     * GET /api/batches/{id}
-     */
-    public function show($id)
+
+
+    public function show($batch_code)
     {
-        return response()->json(
-            Batch::with('product', 'barcode')->findOrFail($id),
-            200
-        );
+        $batch = Batch::where('batch_code', $batch_code)->with('batchStocks.warehouse.branch')->firstOrFail();
+        return $batch;
     }
 
-    /**
-     * PUT /api/batches/{id}
-     */
-    public function update(Request $request, $id)
+    public function update(Request $request, $batch_code)
     {
-        $batch = Batch::findOrFail($id);
+        $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
+        $batch->update($request->only(['manufactured_at', 'expires_at']));
+        return $batch;
+    }
 
-        $data = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'manufactured_at' => 'required|date',
-            'expires_at' => 'nullable|date'
+    public function destroy($batch_code)
+    {
+        $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
+        $batch->delete();
+        return response()->json(null, 204);
+    }
+
+    // Custom: Search by code (batch_code or barcode code)
+    public function search($code)
+    {
+        // Try by batch_code first
+        $batch = Batch::where('batch_code', $code)
+            ->with(['batchStocks.warehouse.branch', 'stockTransactions', 'barcodes'])
+            ->first();
+
+        // If not, try by barcode code
+        if (!$batch) {
+            $barcode = Barcode::where('code', $code)->first();
+            if ($barcode) {
+                $batch = $barcode->batch()->with(['batchStocks.warehouse.branch', 'stockTransactions', 'barcodes'])->first();
+            }
+        }
+
+        if (!$batch) {
+            abort(404, 'Batch not found');
+        }
+
+        // Aggregate for response
+        $totalQuantity = $batch->batchStocks->sum('quantity');
+        $isDepleted = $totalQuantity === 0;
+        $locations = $batch->batchStocks->map(function ($stock) {
+            return [
+                'branch' => $stock->warehouse->branch->name,
+                'warehouse' => $stock->warehouse->name,
+                'quantity' => $stock->quantity,
+            ];
+        });
+
+        return response()->json([
+            'batch_code' => $batch->batch_code,
+            'total_quantity' => $totalQuantity,
+            'is_depleted' => $isDepleted,
+            'locations' => $locations,
+            'history' => $batch->stockTransactions->sortByDesc('created_at'),
+            'barcodes' => $batch->barcodes,
         ]);
-
-        $batch->update($data);
-
-        return response()->json([
-            'message' => 'Batch updated successfully',
-            'data' => $batch
-        ], 200);
     }
 
-    /**
-     * DELETE /api/batches/{id}
-     */
-    public function destroy($id)
+    // Helper for batch_code
+    private function generateBatchCode()
     {
-        Batch::findOrFail($id)->delete();
-
-        return response()->json([
-            'message' => 'Batch deleted successfully'
-        ], 200);
+        return 'B-' . now()->format('Ymd-His');
     }
 
-    public function printBarcode($id)
+        public function printBarcode($id)
     {
         $batch = Batch::with('product', 'barcode')->findOrFail($id);
 
@@ -122,4 +154,3 @@ class BatchController extends Controller
     }
 
 }
-

@@ -24,4 +24,8 @@ class Warehouse extends Model
     {
         return $this->hasMany(Stock::class);
     }
+        public function batchStocks()
+    {
+        return $this->hasMany(BatchStock::class);
+    }
 }

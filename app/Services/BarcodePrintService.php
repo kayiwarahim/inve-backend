@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Batch;
 use App\Models\BarcodePrintLog;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class BarcodePrintService
 {
@@ -16,7 +17,7 @@ class BarcodePrintService
     ): void {
         BarcodePrintLog::create([
             'batch_id'   => $batch->id,
-            'printed_by'=> auth()->id(),
+            'printed_by'=> Auth::id(),
             'copies'    => $copies,
             'printer_name' => $printer,
             'reason'    => $reason,

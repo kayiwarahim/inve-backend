@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\StockLevelController;
 use App\Http\Controllers\Api\ScanController;
+use App\Http\Controllers\Api\DashboardController;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -37,13 +38,16 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
     Route::apiResource('products', ProductController::class);
-    Route::apiResource('batches', BatchController::class);
+    Route::apiResource('batches', BatchController::class)->parameters(['batches' => 'batch_code']); // Uses batch_code instead of id
+    // Search by batch_code or barcode code
+    Route::get('search/{code}', [BatchController::class, 'search']); 
+    Route::apiResource('barcodes', BarcodeController::class);
     Route::apiResource('warehouses', WarehouseController::class);
     Route::apiResource('branches', BranchController::class);
     // Stock movements
-    Route::post('/stock/in', [StockMovementController::class, 'stockIn']);
-    Route::post('/stock/out', [StockMovementController::class, 'stockOut']);
-    Route::post('/stock/transfer', [StockMovementController::class, 'transfer']);
+    Route::post('/stock/in/{batch_code}', [StockMovementController::class, 'stockIn']);
+    Route::post('/stock/out/{batch_code}', [StockMovementController::class, 'stockOut']);
+    Route::post('/stock/transfer/{batch_code}', [StockMovementController::class, 'transfer']);
     // Approvals
     Route::post('movement-approvals/{id}/approve', [MovementApprovalController::class, 'approve']);
     Route::post('movement-approvals/{id}/reject', [MovementApprovalController::class, 'reject']);
@@ -72,3 +76,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Barcode lookup (scan / manual)
     Route::get('/barcodes/{code}', [BarcodeController::class, 'showByCode']);
 });
+
+Route::prefix('dashboard')->group(function () {
+    Route::get('product-stock/{product_id}', [DashboardController::class, 'productStock']);
+    Route::get('product-stock', [DashboardController::class, 'allProductStock']);
+    Route::get('recent-transfers', [DashboardController::class, 'recentTransfers']);
+    Route::get('warehouse-products/{warehouse_id}', [DashboardController::class, 'warehouseProducts']);
+    // Add more as needed, e.g., Route::get('low-stock', ...);
+})->middleware('auth:sanctum'); // If auth required

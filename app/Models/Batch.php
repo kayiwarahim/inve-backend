@@ -24,8 +24,17 @@ class Batch extends Model
     {
         return $this->belongsTo(Product::class);
     }
+        public function batchStocks()
+    {
+        return $this->hasMany(BatchStock::class);
+    }
 
-    public function barcode(): HasOne
+    public function stockTransactions()
+    {
+        return $this->hasMany(StockTransaction::class);
+    }
+
+    public function barcode()
     {
         return $this->hasOne(Barcode::class);
     }
