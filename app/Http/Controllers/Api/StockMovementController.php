@@ -3,39 +3,96 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\StockMovementService;
+use App\Models\Batch;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+
 
 class StockMovementController extends Controller
 {
-    public function stockIn(Request $request, StockMovementService $service)
+    // Custom: Stock In
+    public function stockIn(Request $request, $batch_code)
     {
-        return $service->stockIn($request->validate([
-            'batch_id' => 'required|exists:batches,id',
-            'to_warehouse_id' => 'required|exists:warehouses,id',
-            'quantity' => 'required|numeric|min:0.001',
-            'remarks' => 'nullable|string'
-        ]));
+        $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
+        // Validate: warehouse_id, quantity > 0
+        DB::transaction(function () use ($batch, $request) {
+            $stock = $batch->batchStocks()->firstOrCreate(
+                ['warehouse_id' => $request->warehouse_id],
+                ['quantity' => 0]
+            );
+            $stock->increment('quantity', $request->quantity);
+
+            $batch->stockTransactions()->create([
+                'type' => 'in',
+                'quantity' => $request->quantity,
+                'to_warehouse_id' => $request->warehouse_id,
+                'reason' => $request->reason,
+                'user_id' => Auth::id(),
+            ]);
+        });
+
+        return response()->json($batch->fresh(), 200);
     }
 
-    public function stockOut(Request $request, StockMovementService $service)
+    // Custom: Stock Out
+    public function stockOut(Request $request, $batch_code)
     {
-        return $service->stockOut($request->validate([
-            'batch_id' => 'required|exists:batches,id',
-            'from_warehouse_id' => 'required|exists:warehouses,id',
-            'quantity' => 'required|numeric|min:0.001',
-            'remarks' => 'nullable|string'
-        ]));
+        $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
+        // Validate: warehouse_id, quantity <= available
+        DB::transaction(function () use ($batch, $request) {
+            $stock = $batch->batchStocks()->where('warehouse_id', $request->warehouse_id)->firstOrFail();
+            if ($stock->quantity < $request->quantity) {
+                abort(422, 'Insufficient quantity');
+            }
+            $stock->decrement('quantity', $request->quantity);
+            if ($stock->quantity === 0) {
+                $stock->delete();
+            }
+
+            $batch->stockTransactions()->create([
+                'type' => 'out',
+                'quantity' => $request->quantity,
+                'from_warehouse_id' => $request->warehouse_id,
+                'reason' => $request->reason,
+                'user_id' => Auth::id(),
+            ]);
+        });
+
+        return response()->json($batch->fresh(), 200);
     }
 
-    public function transfer(Request $request, StockMovementService $service)
+    // Custom: Transfer
+    public function transfer(Request $request, $batch_code)
     {
-        return $service->transfer($request->validate([
-            'batch_id' => 'required|exists:batches,id',
-            'from_warehouse_id' => 'required|exists:warehouses,id',
-            'to_warehouse_id' => 'required|exists:warehouses,id',
-            'quantity' => 'required|numeric|min:0.001',
-            'remarks' => 'nullable|string'
-        ]));
+        $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
+        // Validate: from_warehouse_id, to_warehouse_id, quantity <= available
+        DB::transaction(function () use ($batch, $request) {
+            $fromStock = $batch->batchStocks()->where('warehouse_id', $request->from_warehouse_id)->firstOrFail();
+            if ($fromStock->quantity < $request->quantity) {
+                abort(422, 'Insufficient quantity');
+            }
+            $fromStock->decrement('quantity', $request->quantity);
+            if ($fromStock->quantity === 0) {
+                $fromStock->delete();
+            }
+
+            $toStock = $batch->batchStocks()->firstOrCreate(
+                ['warehouse_id' => $request->to_warehouse_id],
+                ['quantity' => 0]
+            );
+            $toStock->increment('quantity', $request->quantity);
+
+            $batch->stockTransactions()->create([
+                'type' => 'transfer',
+                'quantity' => $request->quantity,
+                'from_warehouse_id' => $request->from_warehouse_id,
+                'to_warehouse_id' => $request->to_warehouse_id,
+                'reason' => $request->reason,
+                'user_id' => Auth::id(),
+            ]);
+        });
+
+        return response()->json($batch->fresh(), 200);
     }
 }

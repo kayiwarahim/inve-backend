@@ -49,7 +49,7 @@ class BarcodeService
         return sprintf(
             '%s-%s-%06d',
             strtoupper($batch->product->sku),
-            now()->format('Ymd'),
+            now()->format('Ymd-His'),
             $batch->id
         );
     }
