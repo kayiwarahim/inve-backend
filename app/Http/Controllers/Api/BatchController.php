@@ -88,14 +88,17 @@ class BatchController extends Controller
     {
         // Try by batch_code first
         $batch = Batch::where('batch_code', $code)
-            ->with(['batchStocks.warehouse.branch', 'stockTransactions', 'barcodes'])
+            ->with(['batchStocks.warehouse.branch', 'stockTransactions', 'barcode'])
             ->first();
 
         // If not, try by barcode code
         if (!$batch) {
             $barcode = Barcode::where('code', $code)->first();
+
             if ($barcode) {
-                $batch = $barcode->batch()->with(['batchStocks.warehouse.branch', 'stockTransactions', 'barcodes'])->first();
+                $batch = $barcode->batch()
+                    ->with(['batchStocks.warehouse.branch', 'stockTransactions', 'barcode'])
+                    ->first();
             }
         }
 
@@ -106,21 +109,22 @@ class BatchController extends Controller
         // Aggregate for response
         $totalQuantity = $batch->batchStocks->sum('quantity');
         $isDepleted = $totalQuantity === 0;
+
         $locations = $batch->batchStocks->map(function ($stock) {
             return [
-                'branch' => $stock->warehouse->branch->name,
+                'branch'    => $stock->warehouse->branch->name,
                 'warehouse' => $stock->warehouse->name,
-                'quantity' => $stock->quantity,
+                'quantity'  => $stock->quantity,
             ];
         });
 
         return response()->json([
-            'batch_code' => $batch->batch_code,
+            'batch_code'     => $batch->batch_code,
             'total_quantity' => $totalQuantity,
-            'is_depleted' => $isDepleted,
-            'locations' => $locations,
-            'history' => $batch->stockTransactions->sortByDesc('created_at'),
-            'barcodes' => $batch->barcodes,
+            'is_depleted'    => $isDepleted,
+            'locations'      => $locations,
+            'history'        => $batch->stockTransactions->sortByDesc('created_at'),
+            'barcode'        => $batch->barcode, // singular
         ]);
     }
 
@@ -152,5 +156,4 @@ class BatchController extends Controller
 
         return $pdf->stream('batch-barcode-'.$batch->batch_code.'.pdf');
     }
-
 }
