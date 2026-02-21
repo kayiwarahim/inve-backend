@@ -32,6 +32,13 @@ Route::get('/test-mail', function () {
     });
 });
 
+Route::middleware('auth:sanctum')->get('/sessions', function (Request $request) {
+    return $request->user()->tokens;
+});
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', function (Request $request) {

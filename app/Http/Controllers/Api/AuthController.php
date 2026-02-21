@@ -41,9 +41,25 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        $token = $user->createToken('api-token')->plainTextToken;
+        // Optional: limit max devices to 3
+        if ($user->tokens()->count() >= 3) {
+            $user->tokens()->oldest()->first()->delete();
+        }
 
-        return response()->json(compact('user', 'token'));
+        $token = $user->createToken(
+            'react-app',
+            ['*'],
+            now()->addDays(7) // expires in 7 days
+        );
+
+        $user->update([
+            'last_login_at' => now(),
+        ]);
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token->plainTextToken
+        ]);
     }
 
     public function logout(Request $request)
@@ -51,5 +67,12 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out']);
+    }
+
+    public function logoutAll(Request $request)
+    {
+        $request->user()->tokens()->delete();
+
+        return response()->json(['message' => 'Logged out from all devices']);
     }
 }
