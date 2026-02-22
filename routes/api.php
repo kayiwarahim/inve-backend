@@ -22,14 +22,19 @@ use App\Http\Controllers\Inventory\{
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/password/otp/request', [PasswordOtpController::class, 'requestOtp']);
-Route::post('/password/otp/verify', [PasswordOtpController::class, 'verifyOtp']);
-Route::post('/password/otp/reset', [PasswordOtpController::class, 'resetPassword']);
+
+Route::post('/password/request-otp', [PasswordOtpController::class, 'requestOtp'])->middleware('throttle:5,1'); // 5 attempts per minute
+Route::post('/password/verify-otp', [PasswordOtpController::class, 'verifyOtp']);
+Route::post('/password/reset', [PasswordOtpController::class, 'resetPassword']);
 Route::get('/test-mail', function () {
-    Mail::raw('Test email', function ($message) {
-        $message->to('kayiwarahim@gmail.com')
-                ->subject('Test Mail');
-    });
+    try {
+        \Illuminate\Support\Facades\Mail::raw('This is a test email.', function ($message) {
+            $message->to('kayiwarahim@gmail.com')->subject('Test Email');
+        });
+        return response()->json(['message' => 'Test email sent']);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
 });
 
 Route::middleware('auth:sanctum')->get('/sessions', function (Request $request) {

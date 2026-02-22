@@ -19,9 +19,10 @@ class PasswordOtpController extends Controller
             'email' => 'required|email|exists:users,email',
         ]);
 
-        $otp = random_int(100000, 999999);
-
+        // Delete any existing OTP for this email to prevent multiples
         PasswordOtp::where('email', $request->email)->delete();
+
+        $otp = random_int(000000, 999999);
 
         $record = PasswordOtp::create([
             'email' => $request->email,
@@ -29,35 +30,20 @@ class PasswordOtpController extends Controller
             'expires_at' => now()->addMinutes(5),
         ]);
 
+        // Send the email (queue it for async)
+        try {
+            Mail::to($request->email)->queue(new SendOtpMail($otp));
+        } catch (\Throwable $e) {
+            // Rollback on exception
+            $record->delete();
+            return response()->json([
+                'mail_error' => $e->getMessage()
+            ], 500);
+        }
+
         return response()->json([
-            'created' => $record
+            'message' => 'OTP sent successfully',
         ]);
-
-        // PasswordOtp::create([
-        //     'email' => $request->email,
-        //     'otp' => Hash::make($otp),
-        //     'expires_at' => now()->addMinutes(5),
-        // ]);
-
-        // try {
-        //     Mail::to($request->email)->send(new SendOtpMail($otp));
-
-        //     if (count(Mail::failures()) > 0) {
-        //         return response()->json([
-        //             'mail_failure' => Mail::failures()
-        //         ], 500);
-        //     }
-
-        // } catch (\Throwable $e) {
-        //     return response()->json([
-        //         'mail_error' => $e->getMessage()
-        //     ], 500);
-        // }
-
-        // return response()->json([
-        //     'message' => 'OTP sent',
-        //     'otp' => $otp, // remove in production
-        // ]);
     }
 
     // Verify OTP
@@ -65,7 +51,7 @@ class PasswordOtpController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'otp' => 'required',
+            'otp' => 'required|digits:6', // Ensure it's a 6-digit number
         ]);
 
         $record = PasswordOtp::where('email', $request->email)->first();
@@ -75,12 +61,15 @@ class PasswordOtpController extends Controller
         }
 
         if (now()->greaterThan($record->expires_at)) {
+            $record->delete(); // Clean up expired
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
         if (! Hash::check($request->otp, $record->otp)) {
             return response()->json(['message' => 'Invalid OTP'], 401);
         }
+
+        // Optionally, mark as verified or extend expiration if needed for multi-step flow
 
         return response()->json(['message' => 'OTP verified']);
     }
@@ -90,26 +79,32 @@ class PasswordOtpController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'otp' => 'required',
-            'password' => 'required|min:6|confirmed',
+            'otp' => 'required|digits:6',
+            'password' => 'required|min:8|confirmed', // Strengthen min length
         ]);
 
         $record = PasswordOtp::where('email', $request->email)->first();
 
-        if (! $record || ! Hash::check($request->otp, $record->otp)) {
-            return response()->json(['message' => 'Invalid OTP'], 401);
+        if (! $record) {
+            return response()->json(['message' => 'OTP not found'], 404);
         }
 
         if (now()->greaterThan($record->expires_at)) {
+            $record->delete();
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
-        $user = User::where('email', $request->email)->first();
+        if (! Hash::check($request->otp, $record->otp)) {
+            return response()->json(['message' => 'Invalid OTP'], 401);
+        }
+
+        $user = User::where('email', $request->email)->firstOrFail();
 
         $user->update([
             'password' => Hash::make($request->password),
         ]);
 
+        // Clean up after successful reset
         PasswordOtp::where('email', $request->email)->delete();
 
         return response()->json(['message' => 'Password reset successful']);

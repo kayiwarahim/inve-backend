@@ -1,11 +1,10 @@
 <?php
 
+// app/Mail/SendOtpMail.php
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class SendOtpMail extends Mailable
@@ -19,22 +18,10 @@ class SendOtpMail extends Mailable
         $this->otp = $otp;
     }
 
-    public function envelope(): Envelope
+    public function build()
     {
-        return new Envelope(
-            subject: 'Your Password Reset OTP',
-        );
-    }
-
-    public function content(): Content
-    {
-        return new Content(
-            view: 'emails.otp', // ✅ correct view
-        );
-    }
-
-    public function attachments(): array
-    {
-        return [];
+        return $this->subject('Your Password Reset OTP')
+                    ->view('emails.otp') // Create this Blade view
+                    ->with(['otp' => $this->otp]);
     }
 }
