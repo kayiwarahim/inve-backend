@@ -21,16 +21,10 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamps();
             $table->timestamp('last_login_at')->nullable();
-            $table->enum('role', [
-                'admin',
-                'supervisor',
-                'worker',
-                'auditor'
-            ])->default('worker');
             $table->foreignId('branch_id')
-                  ->nullable()
-                  ->constrained()
-                  ->nullOnDelete();
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
 
         });
 
