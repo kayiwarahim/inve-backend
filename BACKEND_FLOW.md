@@ -5,9 +5,8 @@
 - Auth: Laravel Sanctum token auth (`auth:sanctum`).
 - Access control: Spatie roles/permissions on `api` guard.
 - Core domain: Inventory by branch, warehouse, product, batch, barcode, and stock movement.
-- Current architecture has **two parallel stock systems**:
-  - Legacy path: `batch_stocks` + `stock_transactions` (actively used by API controllers).
-  - Newer path: `stocks` + `stock_movements` + `movement_approvals` + `stock_snapshots` (implemented in services, partially exposed).
+- Active architecture is now the legacy operational path:
+  - `batch_stocks` + `stock_transactions` are the source of truth for stock state and movement history.
 
 ## High-Level Request Flow
 1. Request enters `routes/api.php`.
@@ -15,9 +14,7 @@
 - `auth:sanctum` for authenticated endpoints.
 - `permission:* ,api` for feature-level authorization.
 3. Controller validates input (inline `Request::validate()` or FormRequest for users).
-4. Controller either:
-- uses direct Eloquent/DB operations (majority of endpoints), or
-- delegates to service classes (approval and stock-level reads).
+4. Controller handles validation and business logic using Eloquent + DB transactions.
 5. JSON response returned (or PDF stream for barcode print endpoint).
 
 ## Auth & Access Flow
@@ -127,33 +124,20 @@ Tables: `batch_stocks`, `stock_transactions`
 
 All 3 are wrapped in DB transactions in controller.
 
-## 6) Approval Workflow (New Service Path)
-Controller: `Api\MovementApprovalController`
-Service: `App\Services\MovementApprovalService`
-
-- `POST /api/movement-approvals/{id}/approve`
-- `POST /api/movement-approvals/{id}/reject`
-
-Approval service behavior:
-- Approve: lock approval, set status `APPROVED`, set approver/timestamp, mark movement approved, apply stock changes via `StockLevelService`.
-- Reject: set `REJECTED`, store remarks, mark movement rejected.
-
-Important: This workflow applies to `stock_movements` records (new system), not legacy `stock_transactions`.
-
-## 7) Stock Levels & Scan
+## 6) Stock Levels & Scan
 Controllers:
 - `Api\StockLevelController`
 - `Api\ScanController`
 
 `StockLevelController`:
-- `GET /api/stock-levels` reads from `stocks` table.
-- `GET /api/stock-levels/warehouse/{warehouseId}/batch/{batchId}` uses `StockLevelService::getWarehouseBatchStock()`.
-- `GET /api/stock-levels/scan/{barcode}` resolves barcode and returns positive-quantity `stocks` locations.
+- `GET /api/stock-levels` reads from `batch_stocks`.
+- `GET /api/stock-levels/warehouse/{warehouseId}/batch/{batchId}` reads specific quantity from `batch_stocks`.
+- `GET /api/stock-levels/scan/{barcode}` resolves barcode and returns positive-quantity `batch_stocks` locations.
 
 `ScanController`:
-- `GET /api/scan/{code}` resolves barcode and returns live locations from `stock_snapshots` table.
+- `GET /api/scan/{code}` resolves barcode and returns live locations from `batch_stocks`.
 
-## 8) Dashboard / Reporting
+## 7) Dashboard / Reporting
 Controller: `Api\DashboardController`
 
 Endpoints:
@@ -167,9 +151,6 @@ Data source is mostly legacy (`batch_stocks` + `stock_transactions`) with joins 
 ## Service Layer (What Exists)
 - `BarcodeService`: creates barcode images + barcode records.
 - `BarcodePrintService`: logs print operations.
-- `StockMovementService`: designed to create `stock_movements`, enforce approval threshold (>100 for OUT/TRANSFER), and call stock-level application logic.
-- `StockLevelService`: source-of-truth API for `stocks` table updates + snapshots.
-- `MovementApprovalService`: approval/rejection operations and stock application.
 
 ## Database Domain Map
 Core master tables:
@@ -184,12 +165,6 @@ Legacy operational tables (active in controllers):
 - `batch_stocks`
 - `stock_transactions`
 
-New operational tables (active in services / stock level endpoints):
-- `stocks`
-- `stock_movements`
-- `movement_approvals`
-- `stock_snapshots`
-
 Support tables:
 - `password_otps`
 - `barcode_print_logs`
@@ -202,23 +177,16 @@ Support tables:
 - CRUD exists for users, products, branches, warehouses, batches.
 - Barcode generation and barcode PDF print endpoint exist.
 - Legacy stock operations (in/out/transfer) are working through API controllers.
+- Stock-level and scan endpoints are aligned to legacy stock tables.
 - Dashboard reporting endpoints are implemented.
-- New stock service architecture (movement/approval/snapshot) exists and is partially wired.
 
 ## Current Gaps / Risks To Address Before Major Changes
-1. Dual stock engines are running in the same codebase (`batch_stocks` vs `stocks`) and can diverge.
-2. Barcode API routing points to `Inventory\BarcodeController`, but that controller does not implement all resource methods listed in routes (`index/show/update/destroy`) and route model binding names are conflicting (`{barcode}` and `{code}` on same prefix).
-3. `BarcodePrintLog` model expects `barcode_id`, but migration uses `batch_id`; relation/model schema mismatch exists.
-4. `Inventory\MovementApprovalController` references `App\Services\Inventory\MovementApprovalService`, which is not present; likely dead/legacy file.
-5. `StockMovementService` (new path) is not used by `Api\StockMovementController` (legacy path), so approvals threshold logic is bypassed in current API movement operations.
-6. Minimal automated tests in `tests/`; feature coverage for critical flows is currently missing.
+1. `BarcodePrintLog` model expects `barcode_id`, but migration uses `batch_id`; relation/model schema mismatch exists.
+2. Minimal automated tests in `tests/`; feature coverage for critical flows is currently missing.
 
 ## Suggested Change Strategy (Safe Next Step)
-1. Pick one inventory source of truth (`stocks` or `batch_stocks`) and align all write/read paths.
-2. Fix barcode controller routing mismatch first to avoid endpoint failures.
-3. Align `barcode_print_logs` model and migration columns.
-4. Move stock movement endpoints onto `StockMovementService` if approval workflow is required.
-5. Add Pest feature tests for auth, movements, approval, and scan endpoints before further refactors.
+1. Align `barcode_print_logs` model and migration columns.
+2. Add Pest feature tests for auth, stock movements, and scan endpoints before further refactors.
 
 ## Quick Route Inventory
-The project currently exposes 60 API routes (`php artisan route:list --path=api --except-vendor`).
+The project currently exposes 56 API routes (`php artisan route:list --path=api --except-vendor`).

@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Barcode;
-use App\Models\Stock;
-use App\Services\StockLevelService;
+use App\Models\BatchStock;
 use Illuminate\Http\Request;
 
 class StockLevelController extends Controller
@@ -18,9 +17,9 @@ class StockLevelController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Stock::with([
-            'warehouse',
-            'batch.product'
+        $query = BatchStock::with([
+            'warehouse.branch',
+            'batch.product',
         ]);
 
         if ($request->filled('warehouse_id')) {
@@ -32,7 +31,7 @@ class StockLevelController extends Controller
         }
 
         return response()->json([
-            'data' => $query->get()
+            'data' => $query->get(),
         ]);
     }
 
@@ -41,16 +40,17 @@ class StockLevelController extends Controller
      */
     public function show(
         int $warehouseId,
-        int $batchId,
-        StockLevelService $service
+        int $batchId
     ) {
+        $quantity = BatchStock::query()
+            ->where('warehouse_id', $warehouseId)
+            ->where('batch_id', $batchId)
+            ->value('quantity') ?? 0;
+
         return response()->json([
             'warehouse_id' => $warehouseId,
-            'batch_id'     => $batchId,
-            'quantity'     => $service->getWarehouseBatchStock(
-                $warehouseId,
-                $batchId
-            )
+            'batch_id' => $batchId,
+            'quantity' => $quantity,
         ]);
     }
 
@@ -63,16 +63,16 @@ class StockLevelController extends Controller
             ->where('code', $barcode)
             ->firstOrFail();
 
-        $locations = Stock::with('warehouse')
+        $locations = BatchStock::with('warehouse.branch')
             ->where('batch_id', $barcode->batch_id)
             ->where('quantity', '>', 0)
             ->get();
 
         return response()->json([
             'barcode' => $barcode->code,
-            'batch'   => $barcode->batch,
+            'batch' => $barcode->batch,
             'product' => $barcode->batch->product,
-            'locations' => $locations
+            'locations' => $locations,
         ]);
     }
 }

@@ -1,10 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BarcodeController;
 use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\MovementApprovalController;
 use App\Http\Controllers\Api\PasswordOtpController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ScanController;
@@ -12,7 +12,6 @@ use App\Http\Controllers\Api\StockLevelController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WarehouseController;
-use App\Http\Controllers\Inventory\BarcodeController;
 use App\Http\Controllers\Inventory\BarcodePrintController;
 use Illuminate\Support\Facades\Route;
 
@@ -61,10 +60,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Barcodes
     Route::get('/barcodes', [BarcodeController::class, 'index'])->middleware('permission:batches.view,api'); // Tie to batches if barcodes are batch-related
     Route::post('/barcodes', [BarcodeController::class, 'store'])->middleware('permission:batches.create,api');
+    Route::get('/barcodes/code/{code}', [BarcodeController::class, 'showByCode'])->middleware('permission:batches.view,api');
     Route::get('/barcodes/{barcode}', [BarcodeController::class, 'show'])->middleware('permission:batches.view,api');
     Route::put('/barcodes/{barcode}', [BarcodeController::class, 'update'])->middleware('permission:batches.edit,api');
     Route::delete('/barcodes/{barcode}', [BarcodeController::class, 'destroy'])->middleware('permission:batches.delete,api');
-    Route::get('/barcodes/{code}', [BarcodeController::class, 'showByCode'])->middleware('permission:batches.view,api');
 
     // Warehouses
     Route::get('/warehouses', [WarehouseController::class, 'index'])->middleware('permission:warehouses.view,api');
@@ -85,10 +84,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/stock/out/{batch_code}', [StockMovementController::class, 'stockOut'])->middleware('permission:stock.out,api');
     Route::post('/stock/transfer/{batch_code}', [StockMovementController::class, 'transfer'])->middleware('permission:stock.transfer,api');
 
-    // Approvals (tie to stock.transfer or similar)
-    Route::post('movement-approvals/{id}/approve', [MovementApprovalController::class, 'approve'])->middleware('permission:stock.transfer,api');
-    Route::post('movement-approvals/{id}/reject', [MovementApprovalController::class, 'reject'])->middleware('permission:stock.transfer,api');
-
     // Scan
     Route::get('scan/{code}', [ScanController::class, 'scan'])->middleware('permission:stock.in|stock.out,api'); // Adjust based on use case
 
@@ -106,5 +101,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('recent-transfers', [DashboardController::class, 'recentTransfers'])->middleware('permission:reports.view,api');
         Route::get('warehouse-products/{warehouse_id}', [DashboardController::class, 'warehouseProducts'])->middleware('permission:reports.view,api');
     });
-    
+
 });

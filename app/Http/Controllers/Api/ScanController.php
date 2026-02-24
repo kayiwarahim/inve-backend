@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Barcode;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ScanController extends Controller
@@ -16,26 +15,26 @@ class ScanController extends Controller
     public function scan(string $code)
     {
         $barcode = Barcode::with([
-            'batch.product'
+            'batch.product',
         ])->where('code', $code)->first();
 
-        if (!$barcode) {
+        if (! $barcode) {
             return response()->json([
-                'message' => 'Barcode not found'
+                'message' => 'Barcode not found',
             ], 404);
         }
 
         $batch = $barcode->batch;
 
         // Get current locations (REAL TIME)
-        $locations = DB::table('stock_snapshots')
-            ->join('warehouses', 'warehouses.id', '=', 'stock_snapshots.warehouse_id')
-            ->where('stock_snapshots.batch_id', $batch->id)
-            ->where('stock_snapshots.quantity', '>', 0)
+        $locations = DB::table('batch_stocks')
+            ->join('warehouses', 'warehouses.id', '=', 'batch_stocks.warehouse_id')
+            ->where('batch_stocks.batch_id', $batch->id)
+            ->where('batch_stocks.quantity', '>', 0)
             ->select(
                 'warehouses.id',
                 'warehouses.name',
-                'stock_snapshots.quantity'
+                'batch_stocks.quantity'
             )
             ->get();
 
@@ -51,7 +50,7 @@ class ScanController extends Controller
                 'name' => $batch->product->name,
                 'sku' => $batch->product->sku ?? null,
             ],
-            'locations' => $locations
+            'locations' => $locations,
         ]);
     }
 }
