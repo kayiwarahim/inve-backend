@@ -19,29 +19,14 @@ use Illuminate\Support\Facades\Route;
 // Public routes (no auth or permissions needed)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-
 Route::post('/password/request-otp', [PasswordOtpController::class, 'requestOtp'])->middleware('throttle:5,1');
 Route::post('/password/verify-otp', [PasswordOtpController::class, 'verifyOtp']);
 Route::post('/password/reset', [PasswordOtpController::class, 'resetPassword']);
-Route::get('/test-mail', function () {
-    try {
-        \Illuminate\Support\Facades\Mail::raw('This is a test email.', function ($message) {
-            $message->to('kayiwarahim@gmail.com')->subject('Test Email');
-        });
-
-        return response()->json(['message' => 'Test email sent']);
-    } catch (\Throwable $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
-});
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
-    Route::get('/sessions', function (Request $request) {
-        return $request->user()->tokens;
-    });
 
     // Users (with permissions, specifying 'api' guard)
     Route::get('/users', [UserController::class, 'index'])->middleware('permission:users.view,api');
@@ -113,12 +98,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/warehouse/{warehouseId}/batch/{batchId}', [StockLevelController::class, 'show'])->middleware('permission:reports.view,api');
         Route::get('/scan/{barcode}', [StockLevelController::class, 'scan'])->middleware('permission:reports.view,api');
     });
-});
 
-// Dashboard routes (with auth and permissions)
-Route::prefix('dashboard')->middleware('auth:sanctum')->group(function () {
-    Route::get('product-stock/{product_id}', [DashboardController::class, 'productStock'])->middleware('permission:reports.view,api');
-    Route::get('product-stock', [DashboardController::class, 'allProductStock'])->middleware('permission:reports.view,api');
-    Route::get('recent-transfers', [DashboardController::class, 'recentTransfers'])->middleware('permission:reports.view,api');
-    Route::get('warehouse-products/{warehouse_id}', [DashboardController::class, 'warehouseProducts'])->middleware('permission:reports.view,api');
+    // Dashboard routes (with auth and permissions)
+    Route::prefix('dashboard')->group(function () {
+        Route::get('product-stock/{product_id}', [DashboardController::class, 'productStock'])->middleware('permission:reports.view,api');
+        Route::get('product-stock', [DashboardController::class, 'allProductStock'])->middleware('permission:reports.view,api');
+        Route::get('recent-transfers', [DashboardController::class, 'recentTransfers'])->middleware('permission:reports.view,api');
+        Route::get('warehouse-products/{warehouse_id}', [DashboardController::class, 'warehouseProducts'])->middleware('permission:reports.view,api');
+    });
+    
 });
