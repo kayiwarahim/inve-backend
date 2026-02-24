@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    public function register(Request $request): JsonResponse
     {
         $request->validate([
             'name' => 'required|string',
@@ -23,12 +26,19 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        $user->syncRoles('admin');
+
         $token = $user->createToken('api-token')->plainTextToken;
 
-        return response()->json(compact('user', 'token'));
+        $user->load(['roles', 'permissions']);
+
+        return response()->json([
+            'user' => $this->formatUserAccess($user),
+            'token' => $token,
+        ]);
     }
 
-    public function login(Request $request)
+    public function login(Request $request): JsonResponse
     {
         $request->validate([
             'email' => 'required|email',
@@ -55,24 +65,74 @@ class AuthController extends Controller
         $user->update([
             'last_login_at' => now(),
         ]);
+        $user->load(['roles', 'permissions']);
 
         return response()->json([
-            'user' => $user,
-            'token' => $token->plainTextToken
+            'user' => $this->formatUserAccess($user),
+            'token' => $token->plainTextToken,
         ]);
     }
 
-    public function logout(Request $request)
+    public function me(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $user->load(['roles', 'permissions']);
+
+        return response()->json($this->formatUserAccess($user));
+    }
+
+    public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out']);
     }
 
-    public function logoutAll(Request $request)
+    public function logoutAll(Request $request): JsonResponse
     {
         $request->user()->tokens()->delete();
 
         return response()->json(['message' => 'Logged out from all devices']);
+    }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     name: string,
+     *     email: string,
+     *     email_verified_at: mixed,
+     *     phone: string|null,
+     *     created_at: mixed,
+     *     updated_at: mixed,
+     *     last_login_at: mixed,
+     *     branch_id: mixed,
+     *     roles: \Illuminate\Database\Eloquent\Collection<int, Role>,
+     *     permissions: \Illuminate\Database\Eloquent\Collection<int, Permission>,
+     *     effective_permissions: array<int, string>
+     * }
+     */
+    private function formatUserAccess(User $user): array
+    {
+        /** @var array<int, string> $effectivePermissions */
+        $effectivePermissions = $user->getAllPermissions()
+            ->pluck('name')
+            ->values()
+            ->all();
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'email_verified_at' => $user->email_verified_at,
+            'phone' => $user->phone,
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
+            'last_login_at' => $user->last_login_at,
+            'branch_id' => $user->branch_id,
+            'roles' => $user->roles,
+            'permissions' => $user->permissions,
+            'effective_permissions' => $effectivePermissions,
+        ];
     }
 }
