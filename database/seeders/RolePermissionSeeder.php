@@ -17,6 +17,10 @@ class RolePermissionSeeder extends Seeder
             'batches.view', 'batches.create', 'batches.edit', 'batches.delete',
             'warehouses.view', 'warehouses.create', 'warehouses.edit', 'warehouses.delete',
             'branches.view', 'branches.create', 'branches.edit', 'branches.delete',
+            'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
+            'source-lots.view', 'source-lots.create', 'source-lots.edit', 'source-lots.delete',
+            'transformations.view', 'transformations.create',
+            'traceability.view',
             'stock.in', 'stock.out', 'stock.transfer', 'stock.reconcile',
             'reports.view', 'reports.export',
             'users.view', 'users.manage',
@@ -35,6 +39,10 @@ class RolePermissionSeeder extends Seeder
             'products.view', 'products.create', 'products.edit', 'products.delete',
             'batches.view', 'batches.create', 'batches.edit', 'batches.delete',
             'warehouses.view', 'warehouses.create', 'warehouses.edit', 'warehouses.delete',
+            'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
+            'source-lots.view', 'source-lots.create', 'source-lots.edit', 'source-lots.delete',
+            'transformations.view', 'transformations.create',
+            'traceability.view',
             'stock.in', 'stock.out', 'stock.transfer', 'stock.reconcile',
             'reports.view', 'reports.export',
         ]);
@@ -42,6 +50,8 @@ class RolePermissionSeeder extends Seeder
         $warehouseWorker = Role::firstOrCreate(['name' => 'warehouse worker', 'guard_name' => 'api']);
         $warehouseWorker->syncPermissions([
             'products.view', 'batches.view', 'warehouses.view',
+            'source-lots.view', 'source-lots.create',
+            'transformations.view', 'transformations.create',
             'stock.in', 'stock.out', 'stock.transfer',
         ]);
 
@@ -51,6 +61,10 @@ class RolePermissionSeeder extends Seeder
             'batches.view', 'batches.edit',
             'warehouses.view', 'warehouses.edit',
             'branches.view', 'branches.create', 'branches.edit', 'branches.delete',
+            'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
+            'source-lots.view', 'source-lots.create', 'source-lots.edit', 'source-lots.delete',
+            'transformations.view', 'transformations.create',
+            'traceability.view',
             'stock.in', 'stock.out', 'stock.transfer', 'stock.reconcile',
             'reports.view', 'reports.export',
             'users.view',

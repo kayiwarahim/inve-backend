@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
         // call(UserSeeder::class);
         // $this->call(UserSeeder::class);
         $this->call(RolePermissionSeeder::class);
+        $this->call(ProcessStepSeeder::class);
 
     }
 }
