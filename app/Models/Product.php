@@ -11,11 +11,16 @@ class Product extends Model
         'name',
         'sku',
         'unit',
-        'description'
+        'description',
     ];
 
     public function batches(): HasMany
     {
         return $this->hasMany(Batch::class);
+    }
+
+    public function transformationLines(): HasMany
+    {
+        return $this->hasMany(LotTransformationLine::class);
     }
 }
