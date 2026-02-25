@@ -5,11 +5,15 @@ use App\Http\Controllers\Api\BarcodeController;
 use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\LotTransformationController;
 use App\Http\Controllers\Api\PasswordOtpController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ScanController;
+use App\Http\Controllers\Api\SourceLotController;
 use App\Http\Controllers\Api\StockLevelController;
 use App\Http\Controllers\Api\StockMovementController;
+use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\TraceabilityController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Controllers\Inventory\BarcodePrintController;
@@ -78,6 +82,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/branches/{branch}', [BranchController::class, 'show'])->middleware('permission:branches.view,api');
     Route::put('/branches/{branch}', [BranchController::class, 'update'])->middleware('permission:branches.edit,api');
     Route::delete('/branches/{branch}', [BranchController::class, 'destroy'])->middleware('permission:branches.delete,api');
+
+    // Suppliers
+    Route::get('/suppliers', [SupplierController::class, 'index'])->middleware('permission:suppliers.view,api');
+    Route::post('/suppliers', [SupplierController::class, 'store'])->middleware('permission:suppliers.create,api');
+    Route::get('/suppliers/{supplier}', [SupplierController::class, 'show'])->middleware('permission:suppliers.view,api');
+    Route::put('/suppliers/{supplier}', [SupplierController::class, 'update'])->middleware('permission:suppliers.edit,api');
+    Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy'])->middleware('permission:suppliers.delete,api');
+
+    // Source lots
+    Route::get('/source-lots', [SourceLotController::class, 'index'])->middleware('permission:source-lots.view,api');
+    Route::post('/source-lots', [SourceLotController::class, 'store'])->middleware('permission:source-lots.create,api');
+    Route::get('/source-lots/{sourceLot}', [SourceLotController::class, 'show'])->middleware('permission:source-lots.view,api');
+
+    // Lot transformations
+    Route::get('/lot-transformations', [LotTransformationController::class, 'index'])->middleware('permission:transformations.view,api');
+    Route::post('/lot-transformations', [LotTransformationController::class, 'store'])->middleware('permission:transformations.create,api');
+    Route::post('/lot-transformations/repack-mixed', [LotTransformationController::class, 'repackMixedPortions'])->middleware('permission:transformations.create,api');
+    Route::get('/trace/{code}', [TraceabilityController::class, 'show'])->middleware('permission:traceability.view,api');
 
     // Stock movements
     Route::post('/stock/in/{batch_code}', [StockMovementController::class, 'stockIn'])->middleware('permission:stock.in,api');
