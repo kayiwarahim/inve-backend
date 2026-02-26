@@ -34,4 +34,14 @@ class Warehouse extends Model
     {
         return $this->hasMany(LotTransformation::class);
     }
+
+    public function inputLotTransformations(): HasMany
+    {
+        return $this->hasMany(LotTransformation::class, 'input_warehouse_id');
+    }
+
+    public function outputLotTransformations(): HasMany
+    {
+        return $this->hasMany(LotTransformation::class, 'output_warehouse_id');
+    }
 }

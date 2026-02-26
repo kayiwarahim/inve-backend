@@ -12,6 +12,8 @@ class LotTransformation extends Model
         'transformation_code',
         'process_step_id',
         'warehouse_id',
+        'input_warehouse_id',
+        'output_warehouse_id',
         'branch_id',
         'performed_by',
         'transformed_at',
@@ -30,6 +32,16 @@ class LotTransformation extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    public function inputWarehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'input_warehouse_id');
+    }
+
+    public function outputWarehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'output_warehouse_id');
     }
 
     public function branch(): BelongsTo
