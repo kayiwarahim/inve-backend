@@ -15,7 +15,9 @@ class StoreLotTransformationRequest extends FormRequest
     {
         return [
             'process_step_id' => ['required', 'integer', 'exists:process_steps,id'],
-            'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
+            'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
+            'input_warehouse_id' => ['required_without:warehouse_id', 'integer', 'exists:warehouses,id'],
+            'output_warehouse_id' => ['required_without:warehouse_id', 'integer', 'exists:warehouses,id'],
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'transformed_at' => ['required', 'date'],
             'remarks' => ['nullable', 'string'],
