@@ -19,7 +19,7 @@ class LotTransformationController extends Controller
     public function index(): JsonResponse
     {
         $items = LotTransformation::query()
-            ->with(['processStep', 'warehouse', 'branch', 'lines.batch.product', 'lines.sourceLot'])
+            ->with(['processStep', 'warehouse', 'inputWarehouse', 'outputWarehouse', 'branch', 'lines.batch.product', 'lines.sourceLot'])
             ->latest('transformed_at')
             ->get();
 
@@ -64,7 +64,9 @@ class LotTransformationController extends Controller
 
         $transformationPayload = [
             'process_step_id' => $mixBuildStep->id,
-            'warehouse_id' => $payload['warehouse_id'],
+            'warehouse_id' => $payload['warehouse_id'] ?? $payload['output_warehouse_id'] ?? $payload['input_warehouse_id'],
+            'input_warehouse_id' => $payload['input_warehouse_id'] ?? $payload['warehouse_id'],
+            'output_warehouse_id' => $payload['output_warehouse_id'] ?? $payload['warehouse_id'],
             'branch_id' => $payload['branch_id'],
             'transformed_at' => $payload['transformed_at'],
             'remarks' => $payload['remarks'] ?? 'Mixed portions replenishment',
@@ -100,11 +102,20 @@ class LotTransformationController extends Controller
 
     private function validateWarehouseAndMassBalance(array $payload): ?JsonResponse
     {
-        $warehouse = Warehouse::query()->findOrFail($payload['warehouse_id']);
+        $inputWarehouseId = $this->resolveInputWarehouseId($payload);
+        $outputWarehouseId = $this->resolveOutputWarehouseId($payload);
+        $inputWarehouse = Warehouse::query()->findOrFail($inputWarehouseId);
+        $outputWarehouse = Warehouse::query()->findOrFail($outputWarehouseId);
 
-        if ((int) $warehouse->branch_id !== (int) $payload['branch_id']) {
+        if ((int) $inputWarehouse->branch_id !== (int) $payload['branch_id']) {
             return response()->json([
-                'message' => 'Warehouse does not belong to the provided branch.',
+                'message' => 'Input warehouse does not belong to the provided branch.',
+            ], 422);
+        }
+
+        if ((int) $outputWarehouse->branch_id !== (int) $payload['branch_id']) {
+            return response()->json([
+                'message' => 'Output warehouse does not belong to the provided branch.',
             ], 422);
         }
 
@@ -133,10 +144,14 @@ class LotTransformationController extends Controller
     private function persistTransformation(array $payload, ProcessStep $processStep, BarcodeService $barcodeService): LotTransformation
     {
         return DB::transaction(function () use ($payload, $processStep, $barcodeService): LotTransformation {
+            $inputWarehouseId = $this->resolveInputWarehouseId($payload);
+            $outputWarehouseId = $this->resolveOutputWarehouseId($payload);
             $transformation = LotTransformation::query()->create([
                 'transformation_code' => $this->generateTransformationCode($processStep->code),
                 'process_step_id' => $payload['process_step_id'],
-                'warehouse_id' => $payload['warehouse_id'],
+                'warehouse_id' => $outputWarehouseId,
+                'input_warehouse_id' => $inputWarehouseId,
+                'output_warehouse_id' => $outputWarehouseId,
                 'branch_id' => $payload['branch_id'],
                 'performed_by' => Auth::id(),
                 'transformed_at' => $payload['transformed_at'],
@@ -147,7 +162,7 @@ class LotTransformationController extends Controller
                 $batch = $this->resolveInputBatch($inputLine);
                 $this->assertInputLineProductConsistency($inputLine, $batch);
                 $stock = $batch->batchStocks()
-                    ->where('warehouse_id', $payload['warehouse_id'])
+                    ->where('warehouse_id', $inputWarehouseId)
                     ->lockForUpdate()
                     ->first();
 
@@ -163,7 +178,7 @@ class LotTransformationController extends Controller
                 $batch->stockTransactions()->create([
                     'type' => 'out',
                     'quantity' => $inputLine['weight_kg'],
-                    'from_warehouse_id' => $payload['warehouse_id'],
+                    'from_warehouse_id' => $inputWarehouseId,
                     'reason' => 'Transformation '.$transformation->transformation_code.' input consumption',
                     'user_id' => Auth::id(),
                 ]);
@@ -181,7 +196,7 @@ class LotTransformationController extends Controller
             $this->applyOutputLines(
                 transformation: $transformation,
                 lines: $payload['outputs'],
-                warehouseId: (int) $payload['warehouse_id'],
+                warehouseId: $outputWarehouseId,
                 lineType: 'output',
                 barcodeService: $barcodeService
             );
@@ -189,7 +204,7 @@ class LotTransformationController extends Controller
             $this->applyOutputLines(
                 transformation: $transformation,
                 lines: $payload['byproducts'] ?? [],
-                warehouseId: (int) $payload['warehouse_id'],
+                warehouseId: $outputWarehouseId,
                 lineType: 'byproduct',
                 barcodeService: $barcodeService
             );
@@ -208,11 +223,23 @@ class LotTransformationController extends Controller
             return $transformation->fresh([
                 'processStep',
                 'warehouse',
+                'inputWarehouse',
+                'outputWarehouse',
                 'branch',
                 'lines.batch.product',
                 'lines.sourceLot',
             ]);
         });
+    }
+
+    private function resolveInputWarehouseId(array $payload): int
+    {
+        return (int) ($payload['input_warehouse_id'] ?? $payload['warehouse_id']);
+    }
+
+    private function resolveOutputWarehouseId(array $payload): int
+    {
+        return (int) ($payload['output_warehouse_id'] ?? $payload['warehouse_id']);
     }
 
     private function resolveInputBatch(array $inputLine): Batch

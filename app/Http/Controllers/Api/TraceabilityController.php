@@ -103,6 +103,8 @@ class TraceabilityController extends Controller
             ->with([
                 'lotTransformation.processStep',
                 'lotTransformation.warehouse',
+                'lotTransformation.inputWarehouse',
+                'lotTransformation.outputWarehouse',
                 'lotTransformation.branch',
                 'lotTransformation.lines.batch.product',
                 'lotTransformation.lines.batch.sourceLot.supplier',
@@ -159,6 +161,8 @@ class TraceabilityController extends Controller
                 'process_step' => $transformation->processStep?->code,
                 'process_name' => $transformation->processStep?->name,
                 'warehouse' => $transformation->warehouse?->name,
+                'input_warehouse' => $transformation->inputWarehouse?->name ?? $transformation->warehouse?->name,
+                'output_warehouse' => $transformation->outputWarehouse?->name ?? $transformation->warehouse?->name,
                 'branch' => $transformation->branch?->name,
                 'transformed_at' => optional($transformation->transformed_at)->toDateTimeString(),
                 'inputs' => $inputs,

@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ChangePasswordRequest;
+use App\Http\Requests\Api\UpdateProfileRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -80,6 +83,39 @@ class AuthController extends Controller
         $user->load(['roles', 'permissions']);
 
         return response()->json($this->formatUserAccess($user));
+    }
+
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $user->update($request->validated());
+        $user->load(['roles', 'permissions']);
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => $this->formatUserAccess($user),
+        ]);
+    }
+
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! Hash::check($request->validated('current_password'), $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        $user->update([
+            'password' => $request->validated('password'),
+        ]);
+
+        return response()->json([
+            'message' => 'Password changed successfully.',
+        ]);
     }
 
     public function logout(Request $request): JsonResponse
