@@ -123,6 +123,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('product-stock/{product_id}', [DashboardController::class, 'productStock'])->middleware('permission:reports.view,api');
         Route::get('product-stock', [DashboardController::class, 'allProductStock'])->middleware('permission:reports.view,api');
         Route::get('recent-transfers', [DashboardController::class, 'recentTransfers'])->middleware('permission:reports.view,api');
+        Route::get('movement-history', [DashboardController::class, 'movementHistory'])->middleware('permission:reports.view,api');
         Route::get('warehouse-products/{warehouse_id}', [DashboardController::class, 'warehouseProducts'])->middleware('permission:reports.view,api');
     });
 

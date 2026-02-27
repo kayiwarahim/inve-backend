@@ -16,7 +16,7 @@ class DashboardController extends Controller
     {
         $product = Product::findOrFail($product_id);
         $stocks = BatchStock::active()
-            ->whereHas('batch', fn($q) => $q->where('product_id', $product_id))
+            ->whereHas('batch', fn ($q) => $q->where('product_id', $product_id))
             ->with(['warehouse.branch'])
             ->selectRaw('warehouse_id, SUM(quantity) as total_quantity')
             ->groupBy('warehouse_id')
@@ -38,7 +38,7 @@ class DashboardController extends Controller
 
     // Current stock levels for all products (with optional filters)
     // Current stock levels for all products (with optional filters)
-// Current stock levels for all products (with optional filters)
+    // Current stock levels for all products (with optional filters)
     public function allProductStock(Request $request)
     {
         $query = BatchStock::query()
@@ -86,36 +86,107 @@ class DashboardController extends Controller
         return response()->json($result);
     }
 
-
-    // Recent transfer histories
+    // Recent transfer histories (backward-compatible)
     public function recentTransfers(Request $request)
+    {
+        $request->merge([
+            'type' => $request->query('type', 'transfer'),
+        ]);
+
+        return $this->movementHistory($request);
+    }
+
+    // General movement history
+    public function movementHistory(Request $request)
     {
         $limit = $request->limit ?? 50;
         $since = $request->since ? \Carbon\Carbon::parse($request->since) : null;
+        $type = (string) $request->query('type', 'all');
 
-        $query = StockTransaction::transfers()
+        $query = StockTransaction::query()
             ->with(['batch.product', 'fromWarehouse.branch', 'toWarehouse.branch', 'user'])
             ->orderBy('created_at', 'desc');
+
+        if ($type === 'transfer') {
+            $query->where('type', 'transfer');
+        } elseif ($type === 'process') {
+            $query->whereIn('type', ['in', 'out'])
+                ->where('reason', 'like', 'Transformation %');
+        }
 
         if ($since) {
             $query->where('created_at', '>=', $since);
         }
 
-        $transfers = $query->limit($limit)->get()
-            ->map(function ($transfer) {
+        $transactions = $query->limit($limit)->get();
+
+        $transformationCodes = $transactions
+            ->filter(function ($movement) {
+                return $movement->type === 'in' && $movement->from_warehouse_id === null;
+            })
+            ->map(function ($movement) {
+                return $this->extractTransformationCode((string) ($movement->reason ?? ''));
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        $processFromWarehouseByCode = collect();
+        if ($transformationCodes->isNotEmpty()) {
+            $outMovements = StockTransaction::query()
+                ->with(['fromWarehouse.branch'])
+                ->where('type', 'out')
+                ->where(function ($nested) use ($transformationCodes) {
+                    foreach ($transformationCodes as $code) {
+                        $nested->orWhere('reason', 'like', 'Transformation '.$code.' %');
+                    }
+                })
+                ->latest('id')
+                ->get();
+
+            $processFromWarehouseByCode = $outMovements->reduce(function ($carry, $movement) {
+                $code = $this->extractTransformationCode((string) ($movement->reason ?? ''));
+                if (! $code || $carry->has($code)) {
+                    return $carry;
+                }
+
+                $carry->put(
+                    $code,
+                    $movement->fromWarehouse
+                        ? $movement->fromWarehouse->name.' ('.$movement->fromWarehouse->branch->name.')'
+                        : null
+                );
+
+                return $carry;
+            }, collect());
+        }
+
+        $movements = $transactions
+            ->map(function ($movement) use ($processFromWarehouseByCode) {
+                $reason = (string) ($movement->reason ?? '');
+                $isProcessMovement = str_starts_with($reason, 'Transformation ');
+                $processCode = $this->extractTransformationCode($reason);
+                $fromWarehouse = $movement->fromWarehouse
+                    ? $movement->fromWarehouse->name.' ('.$movement->fromWarehouse->branch->name.')'
+                    : ($processCode ? ($processFromWarehouseByCode->get($processCode) ?? 'N/A') : 'N/A');
+
                 return [
-                    'date' => $transfer->created_at->format('Y-m-d H:i:s'),
-                    'product' => $transfer->batch->product->name,
-                    'batch_code' => $transfer->batch->batch_code,
-                    'quantity' => $transfer->quantity,
-                    'from' => $transfer->fromWarehouse ? $transfer->fromWarehouse->name . ' (' . $transfer->fromWarehouse->branch->name . ')' : 'N/A',
-                    'to' => $transfer->toWarehouse ? $transfer->toWarehouse->name . ' (' . $transfer->toWarehouse->branch->name . ')' : 'N/A',
-                    'reason' => $transfer->reason,
-                    'user' => $transfer->user ? $transfer->user->name : 'System',
+                    'date' => $movement->created_at->format('Y-m-d H:i:s'),
+                    'movement_type' => $movement->type,
+                    'movement_scope' => $movement->type === 'transfer'
+                        ? 'transfer'
+                        : ($isProcessMovement ? 'process' : 'stock'),
+                    'product' => $movement->batch?->product?->name,
+                    'batch_code' => $movement->batch?->batch_code,
+                    'quantity' => (float) $movement->quantity,
+                    'from' => $fromWarehouse,
+                    'to' => $movement->toWarehouse ? $movement->toWarehouse->name.' ('.$movement->toWarehouse->branch->name.')' : 'N/A',
+                    'reason' => $movement->reason,
+                    'user' => $movement->user ? $movement->user->name : 'System',
                 ];
             });
 
-        return response()->json($transfers);
+        return response()->json($movements);
     }
 
     // All products in a given warehouse with quantities
@@ -145,4 +216,12 @@ class DashboardController extends Controller
         ]);
     }
 
+    private function extractTransformationCode(string $reason): ?string
+    {
+        if (preg_match('/^Transformation\s+(\S+)/', $reason, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return null;
+    }
 }

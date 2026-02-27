@@ -22,7 +22,7 @@ class SupplierController extends Controller
         return response()->json([
             'message' => 'Supplier created successfully',
             'data' => $supplier,
-        ], 201);
+        ], 200);
     }
 
     public function show(Supplier $supplier): JsonResponse

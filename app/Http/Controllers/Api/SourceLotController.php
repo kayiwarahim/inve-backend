@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreSourceLotRequest;
 use App\Models\Batch;
+use App\Models\Product;
 use App\Models\SourceLot;
 use App\Models\Warehouse;
 use App\Services\BarcodeService;
@@ -32,6 +33,13 @@ class SourceLotController extends Controller
         if ((int) $warehouse->branch_id !== (int) $payload['branch_id']) {
             return response()->json([
                 'message' => 'Warehouse does not belong to the provided branch.',
+            ], 422);
+        }
+
+        $product = Product::query()->findOrFail($payload['product_id']);
+        if (! $product->canBeInput()) {
+            return response()->json([
+                'message' => 'Selected product is not allowed as source lot input.',
             ], 422);
         }
 
@@ -80,7 +88,7 @@ class SourceLotController extends Controller
         return response()->json([
             'message' => 'Source lot received successfully',
             'data' => $result,
-        ], 201);
+        ], 200);
     }
 
     public function show(SourceLot $sourceLot): JsonResponse

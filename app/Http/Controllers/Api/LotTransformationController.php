@@ -8,6 +8,7 @@ use App\Http\Requests\Api\StoreLotTransformationRequest;
 use App\Models\Batch;
 use App\Models\LotTransformation;
 use App\Models\ProcessStep;
+use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\BarcodeService;
 use Illuminate\Http\JsonResponse;
@@ -161,6 +162,7 @@ class LotTransformationController extends Controller
             foreach ($payload['inputs'] as $inputLine) {
                 $batch = $this->resolveInputBatch($inputLine);
                 $this->assertInputLineProductConsistency($inputLine, $batch);
+                $this->assertProductCanBeInput((int) $batch->product_id);
                 $stock = $batch->batchStocks()
                     ->where('warehouse_id', $inputWarehouseId)
                     ->lockForUpdate()
@@ -210,6 +212,10 @@ class LotTransformationController extends Controller
             );
 
             foreach ($payload['waste'] ?? [] as $wasteLine) {
+                if (isset($wasteLine['product_id']) && $wasteLine['product_id'] !== null) {
+                    $this->assertProductCanBeOutput((int) $wasteLine['product_id']);
+                }
+
                 $transformation->lines()->create([
                     'line_type' => 'waste',
                     'batch_id' => null,
@@ -275,6 +281,7 @@ class LotTransformationController extends Controller
         foreach ($lines as $line) {
             if (! empty($line['batch_id'])) {
                 $batch = Batch::query()->findOrFail($line['batch_id']);
+                $this->assertProductCanBeOutput((int) $batch->product_id);
                 if (
                     isset($line['product_id']) &&
                     (int) $line['product_id'] !== (int) $batch->product_id
@@ -282,6 +289,7 @@ class LotTransformationController extends Controller
                     abort(422, 'Output line product does not match the selected output batch product.');
                 }
             } else {
+                $this->assertProductCanBeOutput((int) $line['product_id']);
                 $batch = Batch::query()->create([
                     'product_id' => $line['product_id'],
                     'source_lot_id' => null,
@@ -330,5 +338,23 @@ class LotTransformationController extends Controller
     private function generateOutputBatchCode(string $lineType): string
     {
         return sprintf('B-%s-%s', strtoupper($lineType), now()->format('Ymd-His-u'));
+    }
+
+    private function assertProductCanBeInput(int $productId): void
+    {
+        $product = Product::query()->findOrFail($productId);
+
+        if (! $product->canBeInput()) {
+            abort(422, 'Selected product is not allowed as transformation input.');
+        }
+    }
+
+    private function assertProductCanBeOutput(int $productId): void
+    {
+        $product = Product::query()->findOrFail($productId);
+
+        if (! $product->canBeOutput()) {
+            abort(422, 'Selected product is not allowed as transformation output.');
+        }
     }
 }

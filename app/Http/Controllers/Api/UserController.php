@@ -48,7 +48,7 @@ class UserController extends Controller
         return response()->json([
             'message' => 'User created successfully.',
             'user' => $this->formatUserAccess($user),
-        ], 201);
+        ], 200);
     }
 
     public function update(UpdateUserRequest $request, User $user): JsonResponse
