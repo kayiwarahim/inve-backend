@@ -311,7 +311,7 @@ class LotTransformationController extends Controller
                 'type' => 'in',
                 'quantity' => $line['weight_kg'],
                 'to_warehouse_id' => $warehouseId,
-                'reason' => 'Transformation '.$transformation->transformation_code.' '.$lineType.' output',
+                'reason' => 'Transformation '.$transformation->transformation_code.' '.$lineType.' product',
                 'user_id' => Auth::id(),
             ]);
 
