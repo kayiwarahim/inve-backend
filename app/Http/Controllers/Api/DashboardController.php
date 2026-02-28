@@ -42,6 +42,7 @@ class DashboardController extends Controller
     public function allProductStock(Request $request)
     {
         $query = BatchStock::query()
+            ->active()
             ->join('batches', 'batch_stocks.batch_id', '=', 'batches.id')
             ->join('products', 'batches.product_id', '=', 'products.id')
             ->join('warehouses', 'batch_stocks.warehouse_id', '=', 'warehouses.id')
@@ -168,7 +169,10 @@ class DashboardController extends Controller
                 $processCode = $this->extractTransformationCode($reason);
                 $fromWarehouse = $movement->fromWarehouse
                     ? $movement->fromWarehouse->name.' ('.$movement->fromWarehouse->branch->name.')'
-                    : ($processCode ? ($processFromWarehouseByCode->get($processCode) ?? 'N/A') : 'N/A');
+                    : ($processCode ? ($processFromWarehouseByCode->get($processCode) ?? 'Unknown process source') : 'External source');
+                $toWarehouse = $movement->toWarehouse
+                    ? $movement->toWarehouse->name.' ('.$movement->toWarehouse->branch->name.')'
+                    : (($isProcessMovement && $movement->type === 'out') ? 'Consumed in process' : 'N/A');
 
                 return [
                     'date' => $movement->created_at->format('Y-m-d H:i:s'),
@@ -180,7 +184,7 @@ class DashboardController extends Controller
                     'batch_code' => $movement->batch?->batch_code,
                     'quantity' => (float) $movement->quantity,
                     'from' => $fromWarehouse,
-                    'to' => $movement->toWarehouse ? $movement->toWarehouse->name.' ('.$movement->toWarehouse->branch->name.')' : 'N/A',
+                    'to' => $toWarehouse,
                     'reason' => $movement->reason,
                     'user' => $movement->user ? $movement->user->name : 'System',
                 ];
