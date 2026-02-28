@@ -10,9 +10,13 @@ class BatchStock extends Model
     use HasFactory;
 
     protected $fillable = [
-        'batch_id', 
-        'warehouse_id', 
-        'quantity'
+        'batch_id',
+        'warehouse_id',
+        'quantity',
+    ];
+
+    protected $casts = [
+        'quantity' => 'decimal:3',
     ];
 
     public function batch()

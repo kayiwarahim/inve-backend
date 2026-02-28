@@ -11,15 +11,25 @@ class Branch extends Model
         'name',
         'code',
         'location',
-        'is_main'
+        'is_main',
     ];
 
     protected $casts = [
-        'is_main' => 'boolean'
+        'is_main' => 'boolean',
     ];
 
     public function warehouses(): HasMany
     {
         return $this->hasMany(Warehouse::class);
+    }
+
+    public function sourceLots(): HasMany
+    {
+        return $this->hasMany(SourceLot::class);
+    }
+
+    public function lotTransformations(): HasMany
+    {
+        return $this->hasMany(LotTransformation::class);
     }
 }

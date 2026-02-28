@@ -5,9 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\DB;
 
 class StockMovementController extends Controller
 {
@@ -46,7 +45,7 @@ class StockMovementController extends Controller
                 abort(422, 'Insufficient quantity');
             }
             $stock->decrement('quantity', $request->quantity);
-            if ($stock->quantity === 0) {
+            if ((float) $stock->fresh()->quantity <= 0.000) {
                 $stock->delete();
             }
 
@@ -73,7 +72,7 @@ class StockMovementController extends Controller
                 abort(422, 'Insufficient quantity');
             }
             $fromStock->decrement('quantity', $request->quantity);
-            if ($fromStock->quantity === 0) {
+            if ((float) $fromStock->fresh()->quantity <= 0.000) {
                 $fromStock->delete();
             }
 

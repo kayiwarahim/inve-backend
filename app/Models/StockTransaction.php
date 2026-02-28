@@ -10,13 +10,17 @@ class StockTransaction extends Model
     use HasFactory;
 
     protected $fillable = [
-        'batch_id', 
-        'from_warehouse_id', 
-        'to_warehouse_id', 
+        'batch_id',
+        'from_warehouse_id',
+        'to_warehouse_id',
         'quantity',
-        'type', 
-        'reason', 
-        'user_id'
+        'type',
+        'reason',
+        'user_id',
+    ];
+
+    protected $casts = [
+        'quantity' => 'decimal:3',
     ];
 
     public function batch()

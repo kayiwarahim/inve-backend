@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ChangePasswordRequest;
+use App\Http\Requests\Api\UpdateProfileRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -82,6 +85,39 @@ class AuthController extends Controller
         return response()->json($this->formatUserAccess($user));
     }
 
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $user->update($request->validated());
+        $user->load(['roles', 'permissions']);
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => $this->formatUserAccess($user),
+        ]);
+    }
+
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! Hash::check($request->validated('current_password'), $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        $user->update([
+            'password' => $request->validated('password'),
+        ]);
+
+        return response()->json([
+            'message' => 'Password changed successfully.',
+        ]);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
@@ -108,14 +144,17 @@ class AuthController extends Controller
      *     last_login_at: mixed,
      *     branch_id: mixed,
      *     roles: \Illuminate\Database\Eloquent\Collection<int, Role>,
+     *     direct_permissions: \Illuminate\Database\Eloquent\Collection<int, Permission>,
      *     permissions: \Illuminate\Database\Eloquent\Collection<int, Permission>,
      *     effective_permissions: array<int, string>
      * }
      */
     private function formatUserAccess(User $user): array
     {
-        /** @var array<int, string> $effectivePermissions */
-        $effectivePermissions = $user->getAllPermissions()
+        $effectivePermissionsCollection = $user->getAllPermissions()->values();
+
+        /** @var array<int, string> $effectivePermissionNames */
+        $effectivePermissionNames = $effectivePermissionsCollection
             ->pluck('name')
             ->values()
             ->all();
@@ -131,8 +170,9 @@ class AuthController extends Controller
             'last_login_at' => $user->last_login_at,
             'branch_id' => $user->branch_id,
             'roles' => $user->roles,
-            'permissions' => $user->permissions,
-            'effective_permissions' => $effectivePermissions,
+            'direct_permissions' => $user->permissions,
+            'permissions' => $effectivePermissionsCollection,
+            'effective_permissions' => $effectivePermissionNames,
         ];
     }
 }

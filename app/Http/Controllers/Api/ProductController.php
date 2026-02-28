@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Product;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
@@ -14,7 +14,18 @@ class ProductController extends Controller
      */
     public function index()
     {
-        return response()->json(Product::all(), 200);
+        $usage = request()->query('usage');
+        $products = Product::query();
+
+        if ($usage === 'input') {
+            $products->whereIn('category', ['input', 'both']);
+        } elseif ($usage === 'output') {
+            $products->whereIn('category', ['output', 'both']);
+        } elseif ($usage === 'both') {
+            $products->where('category', 'both');
+        }
+
+        return response()->json($products->orderBy('name')->get(), 200);
     }
 
     /**
@@ -27,6 +38,7 @@ class ProductController extends Controller
             'sku' => 'required|string|unique:products,sku',
             'name' => 'required|string',
             'unit' => 'required|string',
+            'category' => 'nullable|string|in:input,output,both',
             'description' => 'nullable|string',
         ]);
 
@@ -58,9 +70,10 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         $data = $request->validate([
-            'sku' => 'required|string|unique:products,sku,' . $product->id,
+            'sku' => 'required|string|unique:products,sku,'.$product->id,
             'name' => 'required|string',
             'unit' => 'required|string',
+            'category' => 'nullable|string|in:input,output,both',
             'description' => 'nullable|string',
         ]);
 

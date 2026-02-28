@@ -12,7 +12,7 @@ class Warehouse extends Model
         'branch_id',
         'name',
         'code',
-        'type'
+        'type',
     ];
 
     public function branch(): BelongsTo
@@ -24,8 +24,24 @@ class Warehouse extends Model
     {
         return $this->hasMany(Stock::class);
     }
-        public function batchStocks()
+
+    public function batchStocks(): HasMany
     {
         return $this->hasMany(BatchStock::class);
+    }
+
+    public function lotTransformations(): HasMany
+    {
+        return $this->hasMany(LotTransformation::class);
+    }
+
+    public function inputLotTransformations(): HasMany
+    {
+        return $this->hasMany(LotTransformation::class, 'input_warehouse_id');
+    }
+
+    public function outputLotTransformations(): HasMany
+    {
+        return $this->hasMany(LotTransformation::class, 'output_warehouse_id');
     }
 }
