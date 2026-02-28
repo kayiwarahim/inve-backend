@@ -7,7 +7,10 @@ use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LotTransformationController;
 use App\Http\Controllers\Api\PasswordOtpController;
+use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\ProcessStepController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\ScanController;
 use App\Http\Controllers\Api\SourceLotController;
 use App\Http\Controllers\Api\StockLevelController;
@@ -43,6 +46,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/users/{user}/roles', [UserController::class, 'syncRoles'])->middleware('permission:users.manage,api');
     Route::put('/users/{user}/permissions', [UserController::class, 'syncPermissions'])->middleware('permission:users.manage,api');
     Route::delete('/users/{user}/permissions', [UserController::class, 'revokePermissions'])->middleware('permission:users.manage,api');
+
+    // Roles
+    Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:roles.view,api');
+    Route::post('/roles', [RoleController::class, 'store'])->middleware('permission:roles.create,api');
+    Route::get('/roles/{role}', [RoleController::class, 'show'])->middleware('permission:roles.view,api');
+    Route::put('/roles/{role}', [RoleController::class, 'update'])->middleware('permission:roles.edit,api');
+    Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->middleware('permission:roles.delete,api');
+
+    // Permissions
+    Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:permissions.view,api');
+    Route::post('/permissions', [PermissionController::class, 'store'])->middleware('permission:permissions.create,api');
+    Route::get('/permissions/{permission}', [PermissionController::class, 'show'])->middleware('permission:permissions.view,api');
+    Route::put('/permissions/{permission}', [PermissionController::class, 'update'])->middleware('permission:permissions.edit,api');
+    Route::delete('/permissions/{permission}', [PermissionController::class, 'destroy'])->middleware('permission:permissions.delete,api');
 
     // Products (apiResource with per-method permissions)
     Route::get('/products', [ProductController::class, 'index'])->middleware('permission:products.view,api');
@@ -97,6 +114,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/source-lots', [SourceLotController::class, 'store'])->middleware('permission:source-lots.create,api');
     Route::get('/source-lots/{sourceLot}', [SourceLotController::class, 'show'])->middleware('permission:source-lots.view,api');
 
+    // Process steps
+    Route::get('/process-steps', [ProcessStepController::class, 'index'])->middleware('permission:process-steps.view,api');
+    Route::post('/process-steps', [ProcessStepController::class, 'store'])->middleware('permission:process-steps.create,api');
+    Route::get('/process-steps/{processStep}', [ProcessStepController::class, 'show'])->middleware('permission:process-steps.view,api');
+    Route::put('/process-steps/{processStep}', [ProcessStepController::class, 'update'])->middleware('permission:process-steps.edit,api');
+    Route::delete('/process-steps/{processStep}', [ProcessStepController::class, 'destroy'])->middleware('permission:process-steps.delete,api');
+
     // Lot transformations
     Route::get('/lot-transformations', [LotTransformationController::class, 'index'])->middleware('permission:transformations.view,api');
     Route::post('/lot-transformations', [LotTransformationController::class, 'store'])->middleware('permission:transformations.create,api');
@@ -113,7 +137,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Stock levels
     Route::prefix('stock-levels')->group(function () {
-        Route::get('/', [StockLevelController::class, 'index'])->middleware('permission:reports.view,api'); // Or stock.view if you add it
+        Route::get('/', [StockLevelController::class, 'index'])->middleware('permission:stock.view,api'); // Or stock.view if you add it
         Route::get('/warehouse/{warehouseId}/batch/{batchId}', [StockLevelController::class, 'show'])->middleware('permission:reports.view,api');
         Route::get('/scan/{barcode}', [StockLevelController::class, 'scan'])->middleware('permission:reports.view,api');
     });
