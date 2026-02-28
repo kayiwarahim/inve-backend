@@ -144,14 +144,17 @@ class AuthController extends Controller
      *     last_login_at: mixed,
      *     branch_id: mixed,
      *     roles: \Illuminate\Database\Eloquent\Collection<int, Role>,
+     *     direct_permissions: \Illuminate\Database\Eloquent\Collection<int, Permission>,
      *     permissions: \Illuminate\Database\Eloquent\Collection<int, Permission>,
      *     effective_permissions: array<int, string>
      * }
      */
     private function formatUserAccess(User $user): array
     {
-        /** @var array<int, string> $effectivePermissions */
-        $effectivePermissions = $user->getAllPermissions()
+        $effectivePermissionsCollection = $user->getAllPermissions()->values();
+
+        /** @var array<int, string> $effectivePermissionNames */
+        $effectivePermissionNames = $effectivePermissionsCollection
             ->pluck('name')
             ->values()
             ->all();
@@ -167,8 +170,9 @@ class AuthController extends Controller
             'last_login_at' => $user->last_login_at,
             'branch_id' => $user->branch_id,
             'roles' => $user->roles,
-            'permissions' => $user->permissions,
-            'effective_permissions' => $effectivePermissions,
+            'direct_permissions' => $user->permissions,
+            'permissions' => $effectivePermissionsCollection,
+            'effective_permissions' => $effectivePermissionNames,
         ];
     }
 }
