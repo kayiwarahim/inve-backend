@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Batch;
 use App\Models\Barcode;
-use Illuminate\Http\Request;
+use App\Models\Batch;
 use App\Services\BarcodeService;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class BatchController extends Controller
@@ -24,23 +24,23 @@ class BatchController extends Controller
         $batch = DB::transaction(function () use ($request, $barcodeService) {
 
             $batch = Batch::create([
-                'product_id'     => $request->product_id,
-                'batch_code'     => $this->generateBatchCode(),
-                'manufactured_at'=> $request->manufactured_at,
-                'expires_at'     => $request->expires_at,
+                'product_id' => $request->product_id,
+                'batch_code' => $this->generateBatchCode(),
+                'manufactured_at' => $request->manufactured_at,
+                'expires_at' => $request->expires_at,
             ]);
 
             $batch->batchStocks()->create([
                 'warehouse_id' => $request->warehouse_id,
-                'quantity'     => $request->quantity,
+                'quantity' => $request->quantity,
             ]);
 
             $batch->stockTransactions()->create([
-                'type'            => 'in',
-                'quantity'        => $request->quantity,
+                'type' => 'in',
+                'quantity' => $request->quantity,
                 'to_warehouse_id' => $request->warehouse_id,
-                'reason'          => 'Initial receipt',
-                'user_id'         => Auth::id(),
+                'reason' => 'Initial receipt',
+                'user_id' => Auth::id(),
             ]);
 
             // Generate barcode
@@ -56,16 +56,15 @@ class BatchController extends Controller
             'batch' => $batch,
             'barcode' => [
                 'code' => $batch->barcode->code,
-                'image_url' => asset('storage/barcodes/' . $batch->barcode->code . '.png'),
-            ]
+                'image_url' => asset('storage/barcodes/'.$batch->barcode->code.'.png'),
+            ],
         ], 200);
     }
-
-
 
     public function show($batch_code)
     {
         $batch = Batch::where('batch_code', $batch_code)->with('batchStocks.warehouse.branch')->firstOrFail();
+
         return $batch;
     }
 
@@ -73,6 +72,7 @@ class BatchController extends Controller
     {
         $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
         $batch->update($request->only(['manufactured_at', 'expires_at']));
+
         return $batch;
     }
 
@@ -80,6 +80,7 @@ class BatchController extends Controller
     {
         $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
         $batch->delete();
+
         return response()->json(null, 204);
     }
 
@@ -92,7 +93,7 @@ class BatchController extends Controller
             ->first();
 
         // If not, try by barcode code
-        if (!$batch) {
+        if (! $batch) {
             $barcode = Barcode::where('code', $code)->first();
 
             if ($barcode) {
@@ -102,7 +103,7 @@ class BatchController extends Controller
             }
         }
 
-        if (!$batch) {
+        if (! $batch) {
             abort(404, 'Batch not found');
         }
 
@@ -110,35 +111,38 @@ class BatchController extends Controller
         $totalQuantity = $batch->batchStocks->sum('quantity');
         $isDepleted = $totalQuantity === 0;
 
-        $locations = $batch->batchStocks->map(function ($stock) {
-            return [
-                'branch'    => $stock->warehouse->branch->name,
-                'warehouse' => $stock->warehouse->name,
-                'quantity'  => $stock->quantity,
-            ];
-        });
+        $locations = $batch->batchStocks
+            ->filter(fn ($stock) => (float) $stock->quantity > 0)
+            ->values()
+            ->map(function ($stock) {
+                return [
+                    'branch' => $stock->warehouse->branch->name,
+                    'warehouse' => $stock->warehouse->name,
+                    'quantity' => $stock->quantity,
+                ];
+            });
 
         return response()->json([
-            'batch_code'     => $batch->batch_code,
+            'batch_code' => $batch->batch_code,
             'total_quantity' => $totalQuantity,
-            'is_depleted'    => $isDepleted,
-            'locations'      => $locations,
-            'history'        => $batch->stockTransactions->sortByDesc('created_at'),
-            'barcode'        => $batch->barcode, // singular
+            'is_depleted' => $isDepleted,
+            'locations' => $locations,
+            'history' => $batch->stockTransactions->sortByDesc('created_at'),
+            'barcode' => $batch->barcode, // singular
         ]);
     }
 
     // Helper for batch_code
     private function generateBatchCode()
     {
-        return 'B-' . now()->format('Ymd-His');
+        return 'B-'.now()->format('Ymd-His');
     }
 
-        public function printBarcode($id)
+    public function printBarcode($id)
     {
         $batch = Batch::with('product', 'barcode')->findOrFail($id);
 
-        $generator = new BarcodeGeneratorPNG();
+        $generator = new BarcodeGeneratorPNG;
 
         $barcodeBase64 = base64_encode(
             $generator->getBarcode(
@@ -151,7 +155,7 @@ class BatchController extends Controller
 
         $pdf = Pdf::loadView('pdf.batch-barcode', [
             'batch' => $batch,
-            'barcode' => $barcodeBase64
+            'barcode' => $barcodeBase64,
         ])->setPaper([0, 0, 300, 200]); // label size (optional)
 
         return $pdf->stream('batch-barcode-'.$batch->batch_code.'.pdf');
