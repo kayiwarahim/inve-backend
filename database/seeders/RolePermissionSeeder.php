@@ -11,31 +11,69 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create permissions with 'api' guard
+        // All permissions used in routes
         $permissions = [
+            // Products
             'products.view', 'products.create', 'products.edit', 'products.delete',
+
+            // Batches
             'batches.view', 'batches.create', 'batches.edit', 'batches.delete',
+
+            // Warehouses
             'warehouses.view', 'warehouses.create', 'warehouses.edit', 'warehouses.delete',
+
+            // Branches
             'branches.view', 'branches.create', 'branches.edit', 'branches.delete',
+
+            // Suppliers
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
+
+            // Source Lots
             'source-lots.view', 'source-lots.create', 'source-lots.edit', 'source-lots.delete',
+
+            // Process Steps
             'process-steps.view', 'process-steps.create', 'process-steps.edit', 'process-steps.delete',
+
+            // Transformations
             'transformations.view', 'transformations.create',
+
+            // Traceability
             'traceability.view',
-            'stock.in', 'stock.out', 'stock.transfer', 'stock.reconcile',
+
+            // Stock
+            'stock.in', 'stock.out', 'stock.transfer', 'stock.reconcile', 'stock.view',
+
+            // Reports
             'reports.view', 'reports.export',
+
+            // Users
             'users.view', 'users.manage',
+
+            // Roles
+            'roles.view', 'roles.create', 'roles.edit', 'roles.delete',
+
+            // Permissions
+            'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete',
         ];
 
+        // Create permissions
         foreach ($permissions as $perm) {
-            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'api']);
+            Permission::firstOrCreate([
+                'name' => $perm,
+                'guard_name' => 'api'
+            ]);
         }
 
-        // Create roles with 'api' guard and assign permissions
+        // Create roles
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'api']);
-        $admin->syncPermissions($permissions); // Admin has all
-
         $warehouseManager = Role::firstOrCreate(['name' => 'warehouse manager', 'guard_name' => 'api']);
+        $warehouseWorker = Role::firstOrCreate(['name' => 'warehouse worker', 'guard_name' => 'api']);
+        $manager = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
+
+        // Admin gets ALL permissions
+        $admin->syncPermissions(Permission::where('guard_name', 'api')->pluck('name')->toArray());
+
+        // Warehouse Manager
         $warehouseManager->syncPermissions([
             'products.view', 'products.create', 'products.edit', 'products.delete',
             'batches.view', 'batches.create', 'batches.edit', 'batches.delete',
@@ -49,15 +87,15 @@ class RolePermissionSeeder extends Seeder
             'reports.view', 'reports.export',
         ]);
 
-        $warehouseWorker = Role::firstOrCreate(['name' => 'warehouse worker', 'guard_name' => 'api']);
+        // Warehouse Worker
         $warehouseWorker->syncPermissions([
-            'products.view', 'batches.view', 'warehouses.view', 'process-steps.view',
-            'source-lots.view', 'source-lots.create',
+            'products.view', 'batches.view', 'warehouses.view',
+            'process-steps.view', 'source-lots.view', 'source-lots.create',
             'transformations.view', 'transformations.create',
             'stock.in', 'stock.out', 'stock.transfer',
         ]);
 
-        $manager = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
+        // Manager
         $manager->syncPermissions([
             'products.view', 'products.edit',
             'batches.view', 'batches.edit',
@@ -72,11 +110,5 @@ class RolePermissionSeeder extends Seeder
             'reports.view', 'reports.export',
             'users.view',
         ]);
-
-        // Optional: Assign admin to a test user
-        // $testUser = User::where('email', 'kayiwarahim@gmail.com')->first();
-        // if ($testUser) {
-        //     $testUser->syncRoles('admin');
-        // }
     }
 }

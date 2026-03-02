@@ -20,11 +20,6 @@ class Warehouse extends Model
         return $this->belongsTo(Branch::class);
     }
 
-    public function stocks(): HasMany
-    {
-        return $this->hasMany(Stock::class);
-    }
-
     public function batchStocks(): HasMany
     {
         return $this->hasMany(BatchStock::class);

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BarcodeController;
 use App\Http\Controllers\Api\BatchController;
@@ -151,5 +152,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('movement-history', [DashboardController::class, 'movementHistory'])->middleware('permission:reports.view,api');
         Route::get('warehouse-products/{warehouse_id}', [DashboardController::class, 'warehouseProducts'])->middleware('permission:reports.view,api');
     });
+
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:reports.view,api');
 
 });
