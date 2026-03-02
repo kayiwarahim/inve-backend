@@ -77,10 +77,10 @@ class DashboardController extends Controller
                     return [
                         'warehouse' => $row->warehouse_name,
                         'branch' => $row->branch_name,
-                        'total_quantity' => $row->total_quantity,
+                        'total_quantity' => (float) $row->total_quantity,
                     ];
                 })->values(),
-                'grand_total' => $group->sum('total_quantity'),
+                'grand_total' => (float) $group->sum('total_quantity'),
             ];
         })->values();
 
