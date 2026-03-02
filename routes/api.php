@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BarcodeController;
 use App\Http\Controllers\Api\BatchController;
@@ -42,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/{user}', [UserController::class, 'show'])->middleware('permission:users.view,api');
     Route::post('/users', [UserController::class, 'store'])->middleware('permission:users.manage,api');
     Route::put('/users/{user}', [UserController::class, 'update'])->middleware('permission:users.manage,api');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->middleware('permission:users.manage,api');
     Route::put('/users/{user}/role', [UserController::class, 'assignRole'])->middleware('permission:users.manage,api');
     Route::put('/users/{user}/roles', [UserController::class, 'syncRoles'])->middleware('permission:users.manage,api');
     Route::put('/users/{user}/permissions', [UserController::class, 'syncPermissions'])->middleware('permission:users.manage,api');
@@ -150,5 +152,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('movement-history', [DashboardController::class, 'movementHistory'])->middleware('permission:reports.view,api');
         Route::get('warehouse-products/{warehouse_id}', [DashboardController::class, 'warehouseProducts'])->middleware('permission:reports.view,api');
     });
+
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:reports.view,api');
 
 });

@@ -132,6 +132,15 @@ class UserController extends Controller
         ]);
     }
 
+    public function destroy(User $user): JsonResponse
+    {
+        $user->delete();
+
+        return response()->json([
+            'message' => 'User deleted successfully.',
+        ], 200);
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      */
