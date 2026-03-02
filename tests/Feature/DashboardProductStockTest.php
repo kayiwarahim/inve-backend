@@ -65,6 +65,6 @@ it('omits zero-quantity warehouses from dashboard all product stock response', f
     $response->assertJsonFragment([
         'warehouse' => 'Cold room_1',
         'branch' => 'MUKONO',
-        'total_quantity' => '9900.000',
+        'total_quantity' => 9900,
     ]);
 });

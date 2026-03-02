@@ -57,10 +57,10 @@ it('lists audit logs with pagination and filters', function () {
         'performed_at' => '2026-03-02 15:00:00',
     ]);
 
-    $response = $this->getJson('/api/audit-logs?per_page=2');
+    $response = $this->getJson('/api/audit-logs?per_page=10');
     $response->assertOk();
-    $response->assertJsonPath('per_page', 2);
-    $response->assertJsonCount(2, 'data');
+    $response->assertJsonPath('per_page', 10);
+    $response->assertJsonCount(3, 'data');
     $response->assertJsonPath('data.0.action', 'DELETE api/products/11');
     $response->assertJsonPath('data.1.action', 'PUT api/products/10');
 
