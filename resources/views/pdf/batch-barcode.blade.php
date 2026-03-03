@@ -1,83 +1,130 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
+    <head>
+        <style>
+            @page {
+                size: A4 portrait;
+                margin: 6mm;
+            }
 
-        .label {
-            width: 300px;
-            border: 2px solid #000;
-            padding: 12px;
-            box-sizing: border-box;
-            text-align: center;
-        }
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+                margin: 0;
+                padding: 0;
+            }
 
-        .product-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
+            .page {
+                width: 198mm;
+                height: 285mm;
+                padding-top: 6mm;
+                box-sizing: border-box;
+            }
 
-        .meta {
-            font-size: 12px;
-            margin-bottom: 6px;
-        }
+            table.grid {
+                width: 190mm;
+                margin: 0 auto;
+                border-collapse: separate;
+                border-spacing: 2mm;
+                table-layout: fixed;
+            }
 
-        .meta span {
-            display: block;
-        }
+            td.label-cell {
+                border: 1px solid #000;
+                width: 45mm;
+                height: 20mm;
+                padding: 1.0mm;
+                box-sizing: border-box;
+                vertical-align: center;
+                text-align: center;
+                overflow: hidden;
+            }
 
-        .barcode {
-            margin: 10px 0;
-        }
+            .product-name {
+                font-size: 7px;
+                font-weight: bold;
+                line-height: 1.1;
+                margin-bottom: 0.5mm;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
 
-        .barcode img {
-            width: 100%;
-            height: auto;
-        }
+            .meta {
+                font-size: 6px;
+                margin-bottom: 0.4mm;
+            }
 
-        .barcode-text {
-            font-size: 11px;
-            letter-spacing: 1px;
-            margin-top: 4px;
-        }
+            .meta span {
+                display: block;
+                line-height: 1.1;
+            }
 
-        .footer {
-            font-size: 10px;
-            margin-top: 6px;
-            color: #333;
-        }
-    </style>
-</head>
-<body>
+            .barcode {
+                margin: 0;
+                padding: 0;
+            }
 
-<div class="label">
-    <div class="product-name">
-        {{ $batch->product->name }}
-    </div>
+            .barcode img {
+                display: block;
+                width: 100%;
+                max-width: 100%;
+                height: 7mm;
+                margin: 0 auto;
+                image-rendering: crisp-edges;
+            }
 
-    <div class="meta">
-        <span><strong>Batch:</strong> {{ $batch->batch_code }}</span>
-        @if($batch->expires_at)
-            <span><strong>Exp:</strong> {{ $batch->expires_at->format('Y-m-d') }}</span>
-        @endif
-    </div>
+            .barcode-text {
+                font-size: 5px;
+                letter-spacing: 0.2px;
+                margin-top: 0.2mm;
+                font-family: "Courier New", Courier, monospace;
+            }
 
-    <div class="barcode">
-        <img src="data:image/png;base64,{{ $barcode }}" alt="Barcode">
-        <div class="barcode-text">
-            {{ $batch->barcode->code }}
+            .company-name {
+                font-size: 6px;
+                font-weight: bold;
+                line-height: 1.1;
+                margin-top: 0.4mm;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page">
+            <table class="grid">
+                @for ($row = 0; $row < 11; $row++)
+                    <tr>
+                        @for ($col = 0; $col < 4; $col++)
+                            <td class="label-cell">
+                                <div class="product-name">
+                                    {{ $batch->product->name }}
+                                </div>
+
+                                <div class="meta">
+                                    <span><strong>Batch:</strong> {{ $batch->batch_code }}</span>
+                                    @if($batch->expires_at)
+                                        <span><strong>Exp:</strong> {{ $batch->expires_at->format('Y-m-d') }}</span>
+                                    @endif
+                                </div>
+
+                                <div class="barcode">
+                                    <img src="data:image/png;base64,{{ $barcode }}" alt="Barcode">
+                                    <div class="barcode-text">
+                                        {{ $batch->barcode->code }}
+                                    </div>
+                                </div>
+
+                                <div class="company-name">
+                                    Biyinzika Poultry International Limited
+                                </div>
+
+                            </td>
+                        @endfor
+                    </tr>
+                @endfor
+            </table>
         </div>
-    </div>
-
-    <div class="footer">
-        Packed & Verified
-    </div>
-</div>
-
-</body>
+    </body>
 </html>
