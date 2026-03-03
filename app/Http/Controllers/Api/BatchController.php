@@ -143,21 +143,32 @@ class BatchController extends Controller
         $batch = Batch::with('product', 'barcode')->findOrFail($id);
 
         $generator = new BarcodeGeneratorPNG;
+        $barcodeCode = $batch->barcode->code;
+        $generatorType = $this->resolveGeneratorType($barcodeCode);
 
         $barcodeBase64 = base64_encode(
             $generator->getBarcode(
-                $batch->barcode->code,
-                $generator::TYPE_CODE_128,
+                $barcodeCode,
+                $generatorType,
                 2,   // width factor
-                60   // height
+                65   // height
             )
         );
 
         $pdf = Pdf::loadView('pdf.batch-barcode', [
             'batch' => $batch,
             'barcode' => $barcodeBase64,
-        ])->setPaper([0, 0, 300, 200]); // label size (optional)
+        ])->setPaper('a4', 'portrait');
 
         return $pdf->stream('batch-barcode-'.$batch->batch_code.'.pdf');
+    }
+
+    private function resolveGeneratorType(string $code): string
+    {
+        if (preg_match('/^\d+$/', $code) === 1 && strlen($code) % 2 === 0) {
+            return BarcodeGeneratorPNG::TYPE_CODE_128_C;
+        }
+
+        return BarcodeGeneratorPNG::TYPE_CODE_128;
     }
 }
