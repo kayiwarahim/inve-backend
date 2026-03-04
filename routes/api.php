@@ -140,6 +140,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Stock levels
     Route::prefix('stock-levels')->group(function () {
         Route::get('/', [StockLevelController::class, 'index'])->middleware('permission:stock.view,api'); // Or stock.view if you add it
+        Route::get('/export', [StockLevelController::class, 'export'])->middleware('permission:reports.export,api');
         Route::get('/warehouse/{warehouseId}/batch/{batchId}', [StockLevelController::class, 'show'])->middleware('permission:reports.view,api');
         Route::get('/scan/{barcode}', [StockLevelController::class, 'scan'])->middleware('permission:reports.view,api');
     });
