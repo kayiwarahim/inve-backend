@@ -96,7 +96,7 @@
             <table class="grid">
                 @for ($row = 0; $row < 11; $row++)
                     <tr>
-                        @for ($col = 0; $col < 4; $col++)
+                        @for ($col = 0; $col < 6; $col++)
                             <td class="label-cell">
                                 <div class="product-name">
                                     {{ $batch->product->name }}
@@ -117,7 +117,7 @@
                                 </div>
 
                                 <div class="company-name">
-                                    Biyinzika Poultry International Limited
+                                    Biyinzika Poultry
                                 </div>
 
                             </td>
