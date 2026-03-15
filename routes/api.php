@@ -154,6 +154,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('warehouse-products/{warehouse_id}', [DashboardController::class, 'warehouseProducts'])->middleware('permission:reports.view,api');
     });
 
-    Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:reports.view,api');
+    Route::get('/auditlogs', [AuditLogController::class, 'index'])->middleware('permission:reports.view,api');
 
 });

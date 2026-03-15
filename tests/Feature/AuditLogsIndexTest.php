@@ -57,24 +57,24 @@ it('lists audit logs with pagination and filters', function () {
         'performed_at' => '2026-03-02 15:00:00',
     ]);
 
-    $response = $this->getJson('/api/audit-logs?per_page=10');
+    $response = $this->getJson('/api/auditlogs?per_page=10');
     $response->assertOk();
     $response->assertJsonPath('per_page', 10);
     $response->assertJsonCount(3, 'data');
     $response->assertJsonPath('data.0.action', 'DELETE api/products/11');
     $response->assertJsonPath('data.1.action', 'PUT api/products/10');
 
-    $userFiltered = $this->getJson('/api/audit-logs?user_id='.$alice->id);
+    $userFiltered = $this->getJson('/api/auditlogs?user_id='.$alice->id);
     $userFiltered->assertOk();
     $userFiltered->assertJsonPath('total', 2);
     $userFiltered->assertJsonMissing(['action' => 'PUT api/products/10']);
 
-    $searchFiltered = $this->getJson('/api/audit-logs?search=Bob Operator');
+    $searchFiltered = $this->getJson('/api/auditlogs?search=Bob Operator');
     $searchFiltered->assertOk();
     $searchFiltered->assertJsonPath('total', 1);
     $searchFiltered->assertJsonPath('data.0.action', 'PUT api/products/10');
 
-    $dateFiltered = $this->getJson('/api/audit-logs?from=2026-03-02&to=2026-03-02');
+    $dateFiltered = $this->getJson('/api/auditlogs?from=2026-03-02&to=2026-03-02');
     $dateFiltered->assertOk();
     $dateFiltered->assertJsonPath('total', 2);
 });
