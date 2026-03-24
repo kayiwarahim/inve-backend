@@ -80,7 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/batches/{batch}/print', [BarcodePrintController::class, 'print'])->middleware('permission:batches.view,api'); // Assuming view for printing
 
     // Search (related to batches/products)
-    Route::get('search/{code}', [BatchController::class, 'search'])->middleware('permission:batches.view|products.view,api'); // Using role_or_permission if needed, or adjust
+    Route::get('search/{code}', [BatchController::class, 'search'])->middleware('permission:traceability.view,api'); // Using role_or_permission if needed, or adjust
 
     // Barcodes
     Route::get('/barcodes', [BarcodeController::class, 'index'])->middleware('permission:batches.view,api'); // Tie to batches if barcodes are batch-related
@@ -135,7 +135,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/stock/transfer/{batch_code}', [StockMovementController::class, 'transfer'])->middleware('permission:stock.transfer,api');
 
     // Scan
-    Route::get('scan/{code}', [ScanController::class, 'scan'])->middleware('permission:stock.in|stock.out,api'); // Adjust based on use case
+    Route::get('scan/{code}', [ScanController::class, 'scan'])->middleware('permission:traceability.view,api'); // Adjust based on use case
 
     // Stock levels
     Route::prefix('stock-levels')->group(function () {
