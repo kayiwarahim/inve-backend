@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\AssignUserRolesRequest;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Http\Requests\Api\StoreUserRequest;
 use App\Http\Requests\Api\SyncUserPermissionsRequest;
 use App\Http\Requests\Api\UpdateUserRequest;
@@ -16,10 +17,12 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function index(): LengthAwarePaginator
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
         return User::with(['roles', 'permissions'])
-            ->paginate(20)
+            ->orderBy('name')
+            ->orderBy('id')
+            ->paginate($request->perPage())
             ->through(function (User $user): array {
                 return $this->formatUserAccess($user);
             });

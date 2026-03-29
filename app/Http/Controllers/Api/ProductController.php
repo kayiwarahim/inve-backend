@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Models\Product;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -12,9 +15,9 @@ class ProductController extends Controller
      * GET /api/products
      * List all products
      */
-    public function index()
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
-        $usage = request()->query('usage');
+        $usage = $request->query('usage');
         $products = Product::query();
 
         if ($usage === 'input') {
@@ -25,14 +28,17 @@ class ProductController extends Controller
             $products->where('category', 'both');
         }
 
-        return response()->json($products->orderBy('name')->get(), 200);
+        return $products
+            ->orderBy('name')
+            ->orderBy('id')
+            ->paginate($request->perPage());
     }
 
     /**
      * POST /api/products
      * Create a new product
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
             'sku' => 'required|string|unique:products,sku',
@@ -54,7 +60,7 @@ class ProductController extends Controller
      * GET /api/products/{id}
      * Show single product
      */
-    public function show($id)
+    public function show(int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
 
@@ -65,7 +71,7 @@ class ProductController extends Controller
      * PUT/PATCH /api/products/{id}
      * Update product
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
 
@@ -89,7 +95,7 @@ class ProductController extends Controller
      * DELETE /api/products/{id}
      * Delete product
      */
-    public function destroy($id)
+    public function destroy(int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
         $product->delete();

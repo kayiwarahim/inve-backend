@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Models\Barcode;
 use App\Models\Batch;
 use App\Services\BarcodeService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -13,9 +15,12 @@ class BarcodeController extends Controller
 {
     public function __construct(protected BarcodeService $barcodeService) {}
 
-    public function index()
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
-        return Barcode::with('batch.product')->latest()->get();
+        return Barcode::query()
+            ->with('batch.product')
+            ->latest()
+            ->paginate($request->perPage());
     }
 
     public function store(Request $request)

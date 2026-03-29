@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Http\Requests\Api\StoreSourceLotRequest;
 use App\Models\Batch;
 use App\Models\Product;
 use App\Models\SourceLot;
 use App\Models\Warehouse;
 use App\Services\BarcodeService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,19 +18,17 @@ use RuntimeException;
 
 class SourceLotController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
-        $sourceLots = SourceLot::query()
+        return SourceLot::query()
             ->with(['supplier', 'branch', 'batches'])
             ->latest('received_at')
-            ->get()
-            ->map(function (SourceLot $sourceLot): SourceLot {
+            ->paginate($request->perPage())
+            ->through(function (SourceLot $sourceLot): SourceLot {
                 $sourceLot->setAttribute('batch_code', $sourceLot->batches->first()?->batch_code);
 
                 return $sourceLot;
             });
-
-        return response()->json($sourceLots, 200);
     }
 
     public function store(StoreSourceLotRequest $request, BarcodeService $barcodeService): JsonResponse

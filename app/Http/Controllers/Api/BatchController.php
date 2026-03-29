@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Models\Barcode;
 use App\Models\Batch;
 use App\Services\BarcodeService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,9 +16,12 @@ use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class BatchController extends Controller
 {
-    public function index()
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
-        return Batch::with('product')->get();
+        return Batch::query()
+            ->with('product')
+            ->latest('id')
+            ->paginate($request->perPage());
     }
 
     public function store(Request $request, BarcodeService $barcodeService)

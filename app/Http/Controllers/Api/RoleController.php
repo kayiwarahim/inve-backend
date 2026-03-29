@@ -3,23 +3,29 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Http\Requests\Api\StoreRoleRequest;
 use App\Http\Requests\Api\UpdateRoleRequest;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RoleController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(PaginatedIndexRequest $request): Collection|LengthAwarePaginator
     {
-        $roles = Role::query()
+        $query = Role::query()
             ->where('guard_name', 'api')
             ->with('permissions:id,name,guard_name')
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
 
-        return response()->json($roles, 200);
+        if ($request->has('per_page')) {
+            return $query->paginate($request->perPage());
+        }
+
+        return $query->get();
     }
 
     public function store(StoreRoleRequest $request): JsonResponse

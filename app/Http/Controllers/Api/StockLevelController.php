@@ -5,15 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Exports\StockLevelReportExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ExportStockLevelsRequest;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Models\Barcode;
 use App\Models\Batch;
 use App\Models\BatchStock;
 use App\Models\StockTransaction;
 use App\Models\Warehouse;
 use Carbon\Carbon;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -25,7 +26,7 @@ class StockLevelController extends Controller
      *  - warehouse_id
      *  - batch_id
      */
-    public function index(Request $request): JsonResponse
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
         $query = BatchStock::with([
             'warehouse.branch',
@@ -40,9 +41,10 @@ class StockLevelController extends Controller
             $query->where('batch_id', $request->batch_id);
         }
 
-        return response()->json([
-            'data' => $query->get(),
-        ]);
+        return $query
+            ->orderBy('warehouse_id')
+            ->orderBy('batch_id')
+            ->paginate($request->perPage());
     }
 
     /**

@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Http\Requests\Api\StoreSupplierRequest;
 use App\Http\Requests\Api\UpdateSupplierRequest;
 use App\Models\Supplier;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 
 class SupplierController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
-        return response()->json(Supplier::query()->latest()->get(), 200);
+        return Supplier::query()
+            ->latest()
+            ->paginate($request->perPage());
     }
 
     public function store(StoreSupplierRequest $request): JsonResponse

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Models\Branch;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class BranchController extends Controller
 {
@@ -12,20 +15,23 @@ class BranchController extends Controller
      * GET /api/branches
      * List all branches
      */
-    public function index()
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
-        return response()->json(Branch::all(), 200);
+        return Branch::query()
+            ->orderBy('name')
+            ->orderBy('id')
+            ->paginate($request->perPage());
     }
 
     /**
      * POST /api/branches
      * Create a new branch
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'     => 'required|string',
-            'code'     => 'required|string|unique:branches,code',
+            'name' => 'required|string',
+            'code' => 'required|string|unique:branches,code',
             'location' => 'nullable|string',
         ]);
 
@@ -33,7 +39,7 @@ class BranchController extends Controller
 
         return response()->json([
             'message' => 'Branch created successfully',
-            'data'    => $branch,
+            'data' => $branch,
         ], 200);
     }
 
@@ -41,7 +47,7 @@ class BranchController extends Controller
      * GET /api/branches/{id}
      * Show single branch
      */
-    public function show($id)
+    public function show(int $id): JsonResponse
     {
         $branch = Branch::findOrFail($id);
 
@@ -52,13 +58,13 @@ class BranchController extends Controller
      * PUT/PATCH /api/branches/{id}
      * Update branch
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id): JsonResponse
     {
         $branch = Branch::findOrFail($id);
 
         $data = $request->validate([
-            'name'     => 'required|string',
-            'code'     => 'required|string|unique:branches,code,' . $branch->id,
+            'name' => 'required|string',
+            'code' => 'required|string|unique:branches,code,'.$branch->id,
             'location' => 'nullable|string',
         ]);
 
@@ -66,7 +72,7 @@ class BranchController extends Controller
 
         return response()->json([
             'message' => 'Branch updated successfully',
-            'data'    => $branch,
+            'data' => $branch,
         ], 200);
     }
 
@@ -74,7 +80,7 @@ class BranchController extends Controller
      * DELETE /api/branches/{id}
      * Delete branch
      */
-    public function destroy($id)
+    public function destroy(int $id): JsonResponse
     {
         $branch = Branch::findOrFail($id);
 

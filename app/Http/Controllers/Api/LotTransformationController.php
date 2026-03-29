@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Http\Requests\Api\RepackMixedPortionsRequest;
 use App\Http\Requests\Api\StoreLotTransformationRequest;
 use App\Models\Batch;
@@ -11,20 +12,19 @@ use App\Models\ProcessStep;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\BarcodeService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class LotTransformationController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
-        $items = LotTransformation::query()
+        return LotTransformation::query()
             ->with(['processStep', 'warehouse', 'inputWarehouse', 'outputWarehouse', 'branch', 'lines.batch.product', 'lines.sourceLot'])
             ->latest('transformed_at')
-            ->get();
-
-        return response()->json($items, 200);
+            ->paginate($request->perPage());
     }
 
     public function store(StoreLotTransformationRequest $request, BarcodeService $barcodeService): JsonResponse

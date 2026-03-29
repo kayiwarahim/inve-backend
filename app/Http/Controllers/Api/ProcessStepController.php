@@ -3,21 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PaginatedIndexRequest;
 use App\Http\Requests\Api\StoreProcessStepRequest;
 use App\Http\Requests\Api\UpdateProcessStepRequest;
 use App\Models\ProcessStep;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 
 class ProcessStepController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(PaginatedIndexRequest $request): LengthAwarePaginator
     {
-        $steps = ProcessStep::query()
+        return ProcessStep::query()
             ->orderBy('sequence')
             ->orderBy('id')
-            ->get();
-
-        return response()->json($steps, 200);
+            ->paginate($request->perPage());
     }
 
     public function store(StoreProcessStepRequest $request): JsonResponse

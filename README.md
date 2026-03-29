@@ -1,394 +1,242 @@
 # Inventory Management System - Backend API
 
-A comprehensive Laravel-based inventory management system with multi-warehouse support, batch tracking, barcode generation, and approval workflows.
+Laravel 12 REST API for multi-branch poultry inventory operations, with source-lot intake, batch/barcode tracking, stock movements, lot transformations, traceability, audit logs, and role/permission access control.
 
 ## Table of Contents
 
-- [System Overview](#system-overview)
-- [Features](#features)
-- [Technology Stack](#technology-stack)
+- [Overview](#overview)
+- [Current Functional Scope](#current-functional-scope)
+- [Tech Stack](#tech-stack)
 - [Requirements](#requirements)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [API Documentation](#api-documentation)
-- [Database Structure](#database-structure)
-- [Development](#development)
+- [Setup](#setup)
+- [Development Commands](#development-commands)
+- [Authentication & Authorization](#authentication--authorization)
+- [API Endpoints (Current)](#api-endpoints-current)
+- [Core Data Model](#core-data-model)
 - [Testing](#testing)
 
-## System Overview
+## Overview
 
-This is a powerful inventory management backend API built with Laravel 12. It provides complete inventory control across multiple branches and warehouses with advanced features like batch tracking, barcode scanning, stock movement approvals, and real-time stock level monitoring.
+- Framework: Laravel 12
+- Auth: Laravel Sanctum tokens
+- RBAC: Spatie Laravel Permission
+- Timezone: `Africa/Kampala`
+- Typical flow: Source Lot Intake -> Batch/Barcode -> Stock Movements & Transformations -> Traceability & Reporting
 
-**Timezone:** Africa/Kampala  
-**Database:** MySQL (`inve_backend`)  
-**Authentication:** Laravel Sanctum (Token-based)
+## Current Functional Scope
 
-## Features
+- User auth: register, login, logout, profile update, password change
+- OTP password reset flow (request, verify, reset)
+- User, role, and permission management (RBAC)
+- Master data management:
+  - Branches
+  - Warehouses
+  - Suppliers
+  - Products (with category validation for input/output workflows)
+  - Process steps
+- Batch lifecycle:
+  - Batch CRUD
+  - Barcode generation and lookup
+  - Barcode printing
+- Source-lot intake:
+  - Captures receiving metrics (`gross_car_weight_kg`, tray count/weight, net received weight)
+  - Auto-creates root batch, stock entry, and stock transaction
+- Inventory operations:
+  - Stock in
+  - Stock out
+  - Warehouse-to-warehouse transfer
+- Lot transformations:
+  - Input/output/byproduct/waste lines
+  - Mass-balance validation
+  - Input vs output warehouse flow
+  - Mixed portions replenishment endpoint
+- Traceability:
+  - Trace a code back through transformation history to related source lots
+- Reporting:
+  - Stock levels and scan lookups
+  - Stock level export
+  - Dashboard product stock, movement history, and recent transfers
+  - Audit log listing with pagination/filtering
 
-### Core Functionality
+## Tech Stack
 
-✅ **Product Management**
-- Product catalog with SKU, units, and descriptions
-- Product hierarchy and categorization
-- Batch assignment and tracking
+### Runtime
+- PHP `^8.2`
+- Laravel `^12.0`
 
-✅ **Batch Management**
-- Batch-level inventory tracking
-- Manufacturing and expiry date management
-- Unique batch codes
-- Automatic barcode generation
+### Main Packages
+- `laravel/sanctum` `^4.3`
+- `spatie/laravel-permission` `^6.9`
+- `picqer/php-barcode-generator` `^3.2`
+- `barryvdh/laravel-dompdf` `^3.1`
+- `maatwebsite/excel` `3.1.*`
 
-✅ **Multi-Location Support**
-- Branch management
-- Multiple warehouses per branch
-- Warehouse-specific stock levels
-- Main/sub-branch designation
-
-✅ **Stock Movement Operations**
-- **Stock In**: Receive products (production/purchasing)
-- **Stock Out**: Issue products (sales/consumption)
-- **Stock Transfer**: Move stock between warehouses
-- Movement approval workflow
-- Real-time stock level updates
-
-✅ **Barcode System**
-- Automatic Code-128 barcode generation
-- Barcode scanning for quick lookup
-- PDF barcode printing
-- Barcode print log tracking
-
-✅ **Approval Workflow**
-- Movement approval/rejection system
-- Multi-level authorization
-- Audit trail for approvals
-
-✅ **Stock Tracking & Analytics**
-- Real-time stock levels by warehouse
-- Stock transaction history
-- Stock snapshots for historical data
-- Batch-level stock tracking
-- Dashboard with key metrics
-
-✅ **Authentication & Security**
-- User registration and login
-- Password reset via email OTP
-- Token-based API authentication (Sanctum)
-- Session management
-
-✅ **Audit Logging**
-- Complete audit trail
-- User activity tracking
-- Change history
-
-## Technology Stack
-
-### Backend Framework
-- **Laravel Framework**: 12.x
-- **PHP**: 8.2+
-
-### Key Packages
-- **Laravel Sanctum**: API authentication (v4.3)
-- **DomPDF**: PDF generation for barcode printing (v3.1)
-- **Picqer Barcode Generator**: Code-128 barcode generation (v3.2)
-- **Laravel Tinker**: Interactive debugging (v2.10)
-
-### Development Tools
-- **Pest**: Testing framework (v4.3)
-- **Laravel Pint**: Code style formatter (v1.24)
-- **Laravel Sail**: Docker development environment (v1.41)
-- **Laravel Boost**: Enhanced development tools (v2.1)
-- **Laravel Pail**: Log viewer (v1.2)
-
-### Database & Caching
-- **MySQL**: Primary database
-- **Database Queue**: Job queue driver
-- **Database Cache**: Cache driver
+### Dev Tooling
+- `pestphp/pest` `^3.0`
+- `pestphp/pest-plugin-laravel` `^3.0`
+- `laravel/pint` `^1.24`
+- `laravel/sail` `^1.41`
+- `laravel/boost` `^2.1`
+- `laravel/pail` `^1.2.2`
 
 ## Requirements
 
-- PHP >= 8.2
+- PHP 8.2+
 - Composer
-- MySQL 5.7+ or 8.0+
-- Node.js & NPM
-- XAMPP (or similar LAMP/WAMP stack)
+- MySQL
+- Node.js + npm
 
-## Installation
-
-### 1. Clone the Repository
-
-```bash
-git clone <repository-url>
-cd inve-backend
-```
-
-### 2. Install Dependencies
+## Setup
 
 ```bash
 composer install
 npm install
-```
-
-### 3. Environment Configuration
-
-```bash
 cp .env.example .env
 php artisan key:generate
-```
-
-Update your `.env` file with your database credentials:
-
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=inve_backend
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-### 4. Database Setup
-
-```bash
 php artisan migrate
+npm run build
 ```
 
-Optional: Seed the database with sample data
+Optional seed:
 
 ```bash
 php artisan db:seed
 ```
 
-### 5. Build Frontend Assets
+## Development Commands
 
 ```bash
-npm run build
-```
-
-### 6. Queue Worker
-
-Start the queue worker (required for background jobs):
-
-```bash
+composer run dev      # app server + queue listener + vite
+php artisan test      # run test suite
+vendor/bin/pint       # format code
 php artisan queue:work
-```
-
-## Configuration
-
-### Mail Configuration
-
-For password reset OTP functionality, configure your mail settings in `.env`:
-
-```env
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=your-email@gmail.com
-MAIL_FROM_NAME="${APP_NAME}"
-```
-
-### Queue Configuration
-
-The system uses database queues by default:
-
-```env
-QUEUE_CONNECTION=database
-```
-
-### Storage Configuration
-
-Barcodes are stored using Laravel's storage system:
-
-```env
-FILESYSTEM_DISK=local
-```
-
-## API Documentation
-
-### Authentication Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/register` | Register new user |
-| POST | `/api/login` | User login |
-| POST | `/api/logout` | User logout (authenticated) |
-| GET | `/api/user` | Get authenticated user |
-| GET | `/api/me` | Get current user details |
-
-### Password Reset (OTP)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/password/otp/request` | Request OTP |
-| POST | `/api/password/otp/verify` | Verify OTP |
-| POST | `/api/password/otp/reset` | Reset password |
-
-### Products & Batches
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/products` | List/Create products |
-| GET/PUT/DELETE | `/api/products/{id}` | Show/Update/Delete product |
-| GET/POST | `/api/batches` | List/Create batches |
-| GET/PUT/DELETE | `/api/batches/{batch_code}` | Show/Update/Delete batch |
-| GET | `/api/search/{code}` | Search by batch code or barcode |
-| GET | `/api/batches/{id}/print-barcode` | Print barcode for batch |
-
-### Warehouses & Branches
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/warehouses` | List/Create warehouses |
-| GET/PUT/DELETE | `/api/warehouses/{id}` | Show/Update/Delete warehouse |
-| GET/POST | `/api/branches` | List/Create branches |
-| GET/PUT/DELETE | `/api/branches/{id}` | Show/Update/Delete branch |
-
-### Stock Movements
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/stock/in/{batch_code}` | Stock in operation |
-| POST | `/api/stock/out/{batch_code}` | Stock out operation |
-| POST | `/api/stock/transfer/{batch_code}` | Transfer between warehouses |
-
-### Movement Approvals
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/movement-approvals/{id}/approve` | Approve movement |
-| POST | `/api/movement-approvals/{id}/reject` | Reject movement |
-
-### Stock Levels
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/stock-levels` | Get all stock levels |
-| GET | `/api/stock-levels/warehouse/{warehouseId}/batch/{batchId}` | Get specific stock level |
-| GET | `/api/stock-levels/scan/{barcode}` | Scan barcode for stock info |
-
-### Barcode Management
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/barcodes` | Generate barcode |
-| GET | `/api/barcodes/{code}` | Lookup barcode |
-| POST | `/api/batches/{batch}/print` | Print barcode (PDF) |
-| GET | `/api/scan/{code}` | Scan barcode |
-
-### Dashboard Analytics
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/dashboard/product-stock/{product_id}` | Stock for specific product |
-| GET | `/api/dashboard/product-stock` | Stock for all products |
-| GET | `/api/dashboard/recent-transfers` | Recent transfer history |
-| GET | `/api/dashboard/warehouse-products/{warehouse_id}` | Products in warehouse |
-
-**Note:** All endpoints except authentication require `Authorization: Bearer {token}` header.
-
-## Database Structure
-
-### Core Tables
-
-- **users**: System users
-- **branches**: Company branches
-- **warehouses**: Storage locations
-- **products**: Product catalog
-- **batches**: Product batches with expiry tracking
-- **batch_stocks**: Stock levels per batch per warehouse
-- **stock_movements**: Stock movement records
-- **stock_transactions**: Individual stock transactions
-- **stock_snapshots**: Historical stock snapshots
-- **movement_approvals**: Approval workflow records
-- **barcodes**: Generated barcodes
-- **barcode_print_logs**: Barcode printing history
-- **audit_logs**: System audit trail
-- **password_otps**: Password reset OTPs
-
-## Development
-
-### Run Development Server
-
-```bash
-composer run dev
-```
-
-This command concurrently runs:
-- Laravel development server (port 8000)
-- Queue worker
-- Vite dev server
-
-### Code Formatting
-
-Format code with Laravel Pint:
-
-```bash
-vendor/bin/pint
-```
-
-### View Logs
-
-Use Laravel Pail for real-time log viewing:
-
-```bash
 php artisan pail
 ```
 
-### Tinker (Interactive Shell)
+## Authentication & Authorization
 
-```bash
-php artisan tinker
-```
+- Public auth/OTP endpoints are available without token.
+- All other endpoints are under `auth:sanctum`.
+- Most authenticated endpoints also require permission middleware (for example `permission:products.view,api`).
+
+## API Endpoints (Current)
+
+Base prefix: `/api`
+
+### Public
+
+- `POST /register`
+- `POST /login`
+- `POST /password/request-otp`
+- `POST /password/verify-otp`
+- `POST /password/reset`
+
+### Authenticated Profile
+
+- `POST /logout`
+- `GET /me`
+- `PUT /profile/update`
+- `POST /profile/change-password`
+
+### RBAC & Users
+
+- Users: `GET/POST /users`, `GET/PUT/DELETE /users/{user}`
+- User access meta: `GET /users/access-meta`
+- User roles/permissions: 
+  - `PUT /users/{user}/role`
+  - `PUT /users/{user}/roles`
+  - `PUT /users/{user}/permissions`
+  - `DELETE /users/{user}/permissions`
+- Roles: `GET/POST /roles`, `GET/PUT/DELETE /roles/{role}`
+- Permissions: `GET/POST /permissions`, `GET/PUT/DELETE /permissions/{permission}`
+
+### Master Data
+
+- Products: `GET/POST /products`, `GET/PUT/DELETE /products/{product}`
+- Warehouses: `GET/POST /warehouses`, `GET/PUT/DELETE /warehouses/{warehouse}`
+- Branches: `GET/POST /branches`, `GET/PUT/DELETE /branches/{branch}`
+- Suppliers: `GET/POST /suppliers`, `GET/PUT/DELETE /suppliers/{supplier}`
+- Process Steps: `GET/POST /process-steps`, `GET/PUT/DELETE /process-steps/{processStep}`
+
+### Batches, Barcodes, Search, Scan
+
+- Batches: `GET/POST /batches`, `GET/PUT/DELETE /batches/{batch_code}`
+- Batch barcode print endpoints:
+  - `GET /batches/{id}/print-barcode`
+  - `POST /batches/{batch}/print`
+- Search: `GET /search/{code}`
+- Barcodes:
+  - `GET/POST /barcodes`
+  - `GET /barcodes/code/{code}`
+  - `GET/PUT/DELETE /barcodes/{barcode}`
+- Generic scan: `GET /scan/{code}`
+
+### Source Lots, Transformations, Traceability
+
+- Source lots:
+  - `GET /source-lots`
+  - `POST /source-lots`
+  - `GET /source-lots/{sourceLot}`
+- Lot transformations:
+  - `GET /lot-transformations`
+  - `POST /lot-transformations`
+  - `POST /lot-transformations/repack-mixed`
+- Traceability: `GET /trace/{code}`
+
+### Stock & Reporting
+
+- Stock movements:
+  - `POST /stock/in/{batch_code}`
+  - `POST /stock/out/{batch_code}`
+  - `POST /stock/transfer/{batch_code}`
+- Stock levels:
+  - `GET /stock-levels`
+  - `GET /stock-levels/export`
+  - `GET /stock-levels/warehouse/{warehouseId}/batch/{batchId}`
+  - `GET /stock-levels/scan/{barcode}`
+- Dashboard:
+  - `GET /dashboard/product-stock/{product_id}`
+  - `GET /dashboard/product-stock`
+  - `GET /dashboard/recent-transfers`
+  - `GET /dashboard/movement-history`
+  - `GET /dashboard/warehouse-products/{warehouse_id}`
+- Audit logs: `GET /auditlogs`
+
+## Core Data Model
+
+Main tables currently in use:
+
+- `users`
+- `personal_access_tokens`
+- `roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`
+- `branches`
+- `warehouses`
+- `suppliers`
+- `products`
+- `source_lots`
+- `process_steps`
+- `batches`
+- `barcodes`
+- `barcode_print_logs`
+- `batch_stocks`
+- `stock_transactions`
+- `stock_movements`
+- `stock_snapshots`
+- `lot_transformations`
+- `lot_transformation_lines`
+- `audit_logs`
+- `password_otps`
 
 ## Testing
 
-Run the test suite with Pest:
+Run all tests:
 
 ```bash
-composer test
-# or
-php artisan test
+php artisan test --compact
 ```
 
-Run specific tests:
+Run a single test file:
 
 ```bash
-php artisan test --filter=TestName
+php artisan test --compact --filter=SourceLotIntakeTest
 ```
-
-## Project Scripts
-
-Available composer scripts:
-
-```bash
-composer setup        # Initial project setup
-composer dev          # Run development servers
-composer test         # Run test suite
-```
-
-## Key Services
-
-### StockMovementService
-Handles all stock movement operations (in/out/transfer) with automatic stock level updates.
-
-### BarcodeService
-Generates Code-128 barcodes for batches and manages barcode storage.
-
-### BarcodePrintService
-Creates PDF documents with barcodes for printing.
-
-### StockLevelService
-Manages real-time stock level calculations across warehouses.
-
-### MovementApprovalService
-Handles the approval workflow for stock movements.
-
-## License
-
-This project is open-sourced software licensed under the MIT license.
-
-## Support
-
-For issues and questions, please create an issue in the repository.
