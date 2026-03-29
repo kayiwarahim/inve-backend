@@ -135,11 +135,7 @@ class TraceabilityController extends Controller
                     'contribution_percent' => $inputTotal > 0
                         ? round(($inputWeight / $inputTotal) * 100, 4)
                         : 0.0,
-                    'source_lot' => $inputLine->sourceLot ? [
-                        'id' => $inputLine->sourceLot->id,
-                        'source_lot_code' => $inputLine->sourceLot->source_lot_code,
-                        'supplier' => $inputLine->sourceLot->supplier?->name,
-                    ] : null,
+                    'source_lot' => $this->formatSourceLot($inputLine->sourceLot, false),
                 ];
 
                 if ($inputBatch) {
@@ -182,12 +178,7 @@ class TraceabilityController extends Controller
                 'batch_id' => $batch->id,
                 'batch_code' => $batch->batch_code,
                 'product' => $batch->product?->name,
-                'source_lot' => [
-                    'id' => $batch->sourceLot->id,
-                    'source_lot_code' => $batch->sourceLot->source_lot_code,
-                    'supplier' => $batch->sourceLot->supplier?->name,
-                    'received_at' => optional($batch->sourceLot->received_at)->toDateTimeString(),
-                ],
+                'source_lot' => $this->formatSourceLot($batch->sourceLot),
                 'transformations' => [],
             ];
         }
@@ -196,12 +187,7 @@ class TraceabilityController extends Controller
             'batch_id' => $batch->id,
             'batch_code' => $batch->batch_code,
             'product' => $batch->product?->name,
-            'source_lot' => $batch->sourceLot ? [
-                'id' => $batch->sourceLot->id,
-                'source_lot_code' => $batch->sourceLot->source_lot_code,
-                'supplier' => $batch->sourceLot->supplier?->name,
-                'received_at' => optional($batch->sourceLot->received_at)->toDateTimeString(),
-            ] : null,
+            'source_lot' => $this->formatSourceLot($batch->sourceLot),
             'transformations' => $nodes,
         ];
     }
@@ -239,5 +225,28 @@ class TraceabilityController extends Controller
 
         return $sourceLots
             ->unique(fn (array $item): string => (string) ($item['source_lot_code'] ?? $item['id'] ?? ''));
+    }
+
+    private function formatSourceLot(mixed $sourceLot, bool $includeReceivedAt = true): ?array
+    {
+        if (! $sourceLot) {
+            return null;
+        }
+
+        $formattedSourceLot = [
+            'id' => $sourceLot->id,
+            'source_lot_code' => $sourceLot->source_lot_code,
+            'supplier' => $sourceLot->supplier?->name,
+            'gross_car_weight_kg' => $sourceLot->gross_car_weight_kg !== null ? (float) $sourceLot->gross_car_weight_kg : null,
+            'chicken_tray_count' => $sourceLot->chicken_tray_count,
+            'tray_unit_weight_kg' => $sourceLot->tray_unit_weight_kg !== null ? (float) $sourceLot->tray_unit_weight_kg : null,
+            'received_weight_kg' => $sourceLot->received_weight_kg !== null ? (float) $sourceLot->received_weight_kg : null,
+        ];
+
+        if ($includeReceivedAt) {
+            $formattedSourceLot['received_at'] = optional($sourceLot->received_at)->toDateTimeString();
+        }
+
+        return $formattedSourceLot;
     }
 }
