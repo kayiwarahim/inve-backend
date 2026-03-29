@@ -332,12 +332,12 @@ class LotTransformationController extends Controller
 
     private function generateTransformationCode(string $processCode): string
     {
-        return sprintf('TR-%s-%s', strtoupper($processCode), now()->format('Ymd-His-u'));
+        return sprintf('TR%s-%s', strtoupper($processCode), now()->format('YmdHisu'));
     }
 
     private function generateOutputBatchCode(string $lineType): string
     {
-        return sprintf('B-%s-%s', strtoupper($lineType), now()->format('Ymd-His-u'));
+        return sprintf('B%s-%s', strtoupper($lineType), now()->format('YmdHisu'));
     }
 
     private function assertProductCanBeInput(int $productId): void

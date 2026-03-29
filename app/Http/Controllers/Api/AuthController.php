@@ -71,6 +71,7 @@ class AuthController extends Controller
         $user->load(['roles', 'permissions']);
 
         return response()->json([
+            'message' => 'Logged in successfully',
             'user' => $this->formatUserAccess($user),
             'token' => $token->plainTextToken,
         ]);
@@ -82,7 +83,7 @@ class AuthController extends Controller
         $user = $request->user();
         $user->load(['roles', 'permissions']);
 
-        return response()->json($this->formatUserAccess($user));
+        return response()->json($this->fetchUserPermissions($user));
     }
 
     public function updateProfile(UpdateProfileRequest $request): JsonResponse
@@ -151,6 +152,23 @@ class AuthController extends Controller
      */
     private function formatUserAccess(User $user): array
     {
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->roles->pluck('name')->first(),
+            'email_verified_at' => $user->email_verified_at,
+            'phone' => $user->phone,
+            'branch_id' => $user->branch_id,
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
+            'last_login_at' => $user->last_login_at,
+        ];
+    }
+
+    private function fetchUserPermissions(User $user): array
+    {
         $effectivePermissionsCollection = $user->getAllPermissions()->values();
 
         /** @var array<int, string> $effectivePermissionNames */
@@ -160,15 +178,8 @@ class AuthController extends Controller
             ->all();
 
         return [
-            'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'email_verified_at' => $user->email_verified_at,
-            'phone' => $user->phone,
-            'created_at' => $user->created_at,
-            'updated_at' => $user->updated_at,
-            'last_login_at' => $user->last_login_at,
-            'branch_id' => $user->branch_id,
             'roles' => $user->roles,
             'direct_permissions' => $user->permissions,
             'permissions' => $effectivePermissionsCollection,

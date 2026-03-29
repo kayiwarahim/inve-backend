@@ -12,15 +12,21 @@ use App\Services\BarcodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class SourceLotController extends Controller
 {
     public function index(): JsonResponse
     {
         $sourceLots = SourceLot::query()
-            ->with(['supplier', 'branch'])
+            ->with(['supplier', 'branch', 'batches'])
             ->latest('received_at')
-            ->get();
+            ->get()
+            ->map(function (SourceLot $sourceLot): SourceLot {
+                $sourceLot->setAttribute('batch_code', $sourceLot->batches->first()?->batch_code);
+
+                return $sourceLot;
+            });
 
         return response()->json($sourceLots, 200);
     }
@@ -47,7 +53,10 @@ class SourceLotController extends Controller
             $sourceLot = SourceLot::query()->create([
                 'supplier_id' => $payload['supplier_id'],
                 'branch_id' => $payload['branch_id'],
-                'source_lot_code' => $payload['source_lot_code'],
+                'source_lot_code' => $this->generateSourceLotCode(),
+                'gross_car_weight_kg' => $payload['gross_car_weight_kg'],
+                'chicken_tray_count' => $payload['chicken_tray_count'],
+                'tray_unit_weight_kg' => $payload['tray_unit_weight_kg'],
                 'received_weight_kg' => $payload['received_weight_kg'],
                 'received_at' => $payload['received_at'],
                 'received_by' => Auth::id(),
@@ -113,6 +122,19 @@ class SourceLotController extends Controller
 
     private function generateBatchCode(): string
     {
-        return 'B-SRC-'.now()->format('Ymd-His-u');
+        return 'BYSRC'.now()->format('YmdHisu');
+    }
+
+    private function generateSourceLotCode(): string
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $sourceLotCode = 'SRC_'.now()->format('Ymd').'_'.random_int(100, 999);
+
+            if (! SourceLot::query()->where('source_lot_code', $sourceLotCode)->exists()) {
+                return $sourceLotCode;
+            }
+        }
+
+        throw new RuntimeException('Unable to generate a unique source lot code.');
     }
 }

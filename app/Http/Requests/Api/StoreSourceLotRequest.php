@@ -16,7 +16,9 @@ class StoreSourceLotRequest extends FormRequest
         return [
             'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
-            'source_lot_code' => ['required', 'string', 'max:120', 'unique:source_lots,source_lot_code'],
+            'gross_car_weight_kg' => ['required', 'numeric', 'gt:0'],
+            'chicken_tray_count' => ['required', 'integer', 'gt:0'],
+            'tray_unit_weight_kg' => ['required', 'numeric', 'gt:0'],
             'received_weight_kg' => ['required', 'numeric', 'gt:0'],
             'received_at' => ['required', 'date'],
             'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
@@ -25,6 +27,15 @@ class StoreSourceLotRequest extends FormRequest
             'delivery_note_number' => ['nullable', 'string', 'max:120'],
             'remarks' => ['nullable', 'string'],
             'expires_at' => ['nullable', 'date', 'after_or_equal:received_at'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'gross_car_weight_kg.required' => 'The gross car weight is required.',
+            'chicken_tray_count.required' => 'The number of chicken trays is required.',
+            'tray_unit_weight_kg.required' => 'The tray unit weight is required.',
         ];
     }
 }
