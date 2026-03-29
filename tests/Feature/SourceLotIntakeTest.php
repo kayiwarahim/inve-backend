@@ -53,7 +53,7 @@ it('stores source lot intake receiving metrics and creates stock', function () {
     ]);
 
     $response->assertOk();
-    expect($response->json('data.source_lot.source_lot_code'))->toStartWith('SRC-');
+    expect($response->json('data.source_lot.source_lot_code'))->toStartWith('SRC_');
     $response->assertJsonPath('data.source_lot.gross_car_weight_kg', '1850.500');
     $response->assertJsonPath('data.source_lot.chicken_tray_count', 120);
     $response->assertJsonPath('data.source_lot.tray_unit_weight_kg', '2.500');
@@ -61,7 +61,7 @@ it('stores source lot intake receiving metrics and creates stock', function () {
 
     $sourceLot = SourceLot::query()->findOrFail($response->json('data.source_lot.id'));
 
-    expect($sourceLot->source_lot_code)->toStartWith('SRC-')
+    expect($sourceLot->source_lot_code)->toStartWith('SRC_')
         ->and($sourceLot->gross_car_weight_kg)->toBe('1850.500')
         ->and($sourceLot->chicken_tray_count)->toBe(120)
         ->and($sourceLot->tray_unit_weight_kg)->toBe('2.500')
@@ -86,7 +86,7 @@ it('lists source lots with their attached batch code', function () {
     $sourceLot = SourceLot::query()->create([
         'supplier_id' => $supplier->id,
         'branch_id' => $branch->id,
-        'source_lot_code' => 'SRC-LIST-001',
+        'source_lot_code' => 'SRC_LIST-001',
         'gross_car_weight_kg' => 1600.000,
         'chicken_tray_count' => 90,
         'tray_unit_weight_kg' => 2.000,
@@ -101,7 +101,7 @@ it('lists source lots with their attached batch code', function () {
             'unit' => 'kg',
             'category' => 'input',
         ])->id,
-        'batch_code' => 'B-SRC-LIST-001',
+        'batch_code' => 'B-SRC_LIST-001',
         'manufactured_at' => now()->toDateString(),
     ]);
 
@@ -109,7 +109,7 @@ it('lists source lots with their attached batch code', function () {
 
     $response->assertOk();
     $response->assertJsonFragment([
-        'source_lot_code' => 'SRC-LIST-001',
-        'batch_code' => 'B-SRC-LIST-001',
+        'source_lot_code' => 'SRC_LIST-001',
+        'batch_code' => 'B-SRC_LIST-001',
     ]);
 });
