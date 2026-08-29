@@ -9,7 +9,7 @@
         "lint": "eslint \"resources/js/**/*.{js,jsx,ts,tsx}\""
     },
     "devDependencies": {
-        "@eslint/js": "^10.0.1",
+        "@eslint/js": "^9.39.5",
         "@prettier/plugin-php": "^0.25.0",
         "@tailwindcss/vite": "^4.0.0",
         "@typescript-eslint/eslint-plugin": "^8.68.0",
@@ -21,9 +21,9 @@
         "eslint-plugin-import": "^2.32.0",
         "eslint-plugin-react": "^7.37.5",
         "globals": "^17.11.0",
-        "laravel-vite-plugin": "^2.0.0",
+        "laravel-vite-plugin": "^3.1",
         "prettier": "^3.9.6",
         "tailwindcss": "^4.0.0",
-        "vite": "^7.0.7"
+        "vite": "^8.0.0"
     }
 }
