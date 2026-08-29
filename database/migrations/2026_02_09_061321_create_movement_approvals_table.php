@@ -15,19 +15,19 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('stock_movement_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
+                ->constrained()
+                ->cascadeOnDelete();
 
             $table->enum('status', [
                 'PENDING',
                 'APPROVED',
-                'REJECTED'
+                'REJECTED',
             ])->default('PENDING');
 
             $table->foreignId('approved_by')
-                  ->nullable()
-                  ->references('id')->on('users')
-                  ->nullOnDelete();
+                ->nullable()
+                ->references('id')->on('users')
+                ->nullOnDelete();
 
             $table->timestamp('approved_at')->nullable();
             $table->text('remarks')->nullable();

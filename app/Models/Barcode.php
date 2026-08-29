@@ -12,11 +12,11 @@ class Barcode extends Model
         'batch_id',
         'code',
         'type',
-        'generated_at'
+        'generated_at',
     ];
 
     protected $casts = [
-        'generated_at' => 'datetime'
+        'generated_at' => 'datetime',
     ];
 
     public function batch(): BelongsTo

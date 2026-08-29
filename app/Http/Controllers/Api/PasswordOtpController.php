@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SendOtpMail;
 use App\Models\PasswordOtp;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\SendOtpMail;
 
 class PasswordOtpController extends Controller
 {
@@ -36,8 +36,9 @@ class PasswordOtpController extends Controller
         } catch (\Throwable $e) {
             // Rollback on exception
             $record->delete();
+
             return response()->json([
-                'mail_error' => $e->getMessage()
+                'mail_error' => $e->getMessage(),
             ], 500);
         }
 
@@ -62,6 +63,7 @@ class PasswordOtpController extends Controller
 
         if (now()->greaterThan($record->expires_at)) {
             $record->delete(); // Clean up expired
+
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
@@ -91,6 +93,7 @@ class PasswordOtpController extends Controller
 
         if (now()->greaterThan($record->expires_at)) {
             $record->delete();
+
             return response()->json(['message' => 'OTP expired'], 400);
         }
 

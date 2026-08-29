@@ -11,7 +11,7 @@ class MovementApproval extends Model
         'status',
         'approved_by',
         'approved_at',
-        'remarks'
+        'remarks',
     ];
 
     public function movement()

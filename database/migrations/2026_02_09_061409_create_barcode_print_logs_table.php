@@ -14,12 +14,12 @@ return new class extends Migration
         Schema::create('barcode_print_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('batch_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
+                ->constrained()
+                ->cascadeOnDelete();
             $table->foreignId('printed_by')
-                  ->nullable()
-                  ->references('id')->on('users')
-                  ->nullOnDelete();
+                ->nullable()
+                ->references('id')->on('users')
+                ->nullOnDelete();
             $table->integer('copies')->default(1);
             $table->string('printer_name')->nullable();
             $table->string('reason')->nullable();

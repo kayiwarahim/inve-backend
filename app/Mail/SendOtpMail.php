@@ -1,6 +1,7 @@
 <?php
 
 // app/Mail/SendOtpMail.php
+
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
@@ -21,7 +22,7 @@ class SendOtpMail extends Mailable
     public function build()
     {
         return $this->subject('Your Password Reset OTP')
-                    ->view('emails.otp') // Create this Blade view
-                    ->with(['otp' => $this->otp]);
+            ->view('emails.otp') // Create this Blade view
+            ->with(['otp' => $this->otp]);
     }
 }

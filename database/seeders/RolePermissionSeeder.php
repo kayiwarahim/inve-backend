@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -60,7 +59,7 @@ class RolePermissionSeeder extends Seeder
         foreach ($permissions as $perm) {
             Permission::firstOrCreate([
                 'name' => $perm,
-                'guard_name' => 'api'
+                'guard_name' => 'api',
             ]);
         }
 

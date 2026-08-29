@@ -7,6 +7,7 @@ use App\Models\BatchStock;
 use App\Models\Product;
 use App\Models\StockTransaction;
 use App\Models\Warehouse;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -101,7 +102,7 @@ class DashboardController extends Controller
     public function movementHistory(Request $request)
     {
         $limit = $request->limit ?? 50;
-        $since = $request->since ? \Carbon\Carbon::parse($request->since) : null;
+        $since = $request->since ? Carbon::parse($request->since) : null;
         $type = (string) $request->query('type', 'all');
 
         $query = StockTransaction::query()

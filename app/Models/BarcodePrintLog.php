@@ -10,11 +10,11 @@ class BarcodePrintLog extends Model
     protected $fillable = [
         'barcode_id',
         'printed_by',
-        'printed_at'
+        'printed_at',
     ];
 
     protected $casts = [
-        'printed_at' => 'datetime'
+        'printed_at' => 'datetime',
     ];
 
     public function barcode(): BelongsTo

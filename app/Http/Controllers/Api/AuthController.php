@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ChangePasswordRequest;
 use App\Http\Requests\Api\UpdateProfileRequest;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -144,9 +145,9 @@ class AuthController extends Controller
      *     updated_at: mixed,
      *     last_login_at: mixed,
      *     branch_id: mixed,
-     *     roles: \Illuminate\Database\Eloquent\Collection<int, Role>,
-     *     direct_permissions: \Illuminate\Database\Eloquent\Collection<int, Permission>,
-     *     permissions: \Illuminate\Database\Eloquent\Collection<int, Permission>,
+     *     roles: Collection<int, Role>,
+     *     direct_permissions: Collection<int, Permission>,
+     *     permissions: Collection<int, Permission>,
      *     effective_permissions: array<int, string>
      * }
      */

@@ -15,12 +15,12 @@ class AuditLog extends Model
         'new_values',
         'ip_address',
         'user_agent',
-        'performed_at'
+        'performed_at',
     ];
 
     protected $casts = [
         'old_values' => 'array',
-        'new_values' => 'array'
+        'new_values' => 'array',
     ];
 
     public function user()

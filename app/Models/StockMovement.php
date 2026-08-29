@@ -15,7 +15,7 @@ class StockMovement extends Model
         'quantity',
         'remarks',
         'status',
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [

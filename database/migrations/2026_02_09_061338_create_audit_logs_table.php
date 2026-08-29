@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('user_agent')->nullable();
             $table->timestamp('performed_at');
             $table->timestamps();
-            $table->index(['auditable_type','auditable_id']);
+            $table->index(['auditable_type', 'auditable_id']);
         });
     }
 

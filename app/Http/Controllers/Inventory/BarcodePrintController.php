@@ -14,7 +14,7 @@ class BarcodePrintController extends Controller
         $data = $request->validate([
             'copies' => 'nullable|integer|min:1',
             'printer_name' => 'nullable|string',
-            'reason' => 'nullable|string'
+            'reason' => 'nullable|string',
         ]);
 
         $service->logPrint(

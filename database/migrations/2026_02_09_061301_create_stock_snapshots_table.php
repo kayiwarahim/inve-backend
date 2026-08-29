@@ -15,12 +15,12 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('warehouse_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
+                ->constrained()
+                ->cascadeOnDelete();
 
             $table->foreignId('batch_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
+                ->constrained()
+                ->cascadeOnDelete();
 
             $table->decimal('quantity', 15, 3);
 
@@ -31,7 +31,7 @@ return new class extends Migration
             $table->unique([
                 'warehouse_id',
                 'batch_id',
-                'snapshot_date'
+                'snapshot_date',
             ]);
         });
     }

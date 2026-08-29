@@ -13,11 +13,11 @@ class StockSnapshot extends Model
         'warehouse_id',
         'batch_id',
         'quantity',
-        'snapshot_date'
+        'snapshot_date',
     ];
 
     protected $casts = [
-        'snapshot_date' => 'date'
+        'snapshot_date' => 'date',
     ];
 
     public function warehouse(): BelongsTo
