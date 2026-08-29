@@ -1,12 +1,9 @@
 {
     "agents": [
-        "cursor"
+        "kiro"
     ],
-    "guidelines": true,
-    "herd_mcp": false,
+    "cloud": false,
     "mcp": true,
-    "sail": false,
-    "skills": [
-        "pest-testing"
-    ]
+    "nightwatch": false,
+    "sail": false
 }
