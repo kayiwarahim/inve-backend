@@ -1,6 +1,6 @@
 # Inventory Management System - Backend API
 
-Laravel 12 REST API for multi-branch poultry inventory operations, with source-lot intake, batch/barcode tracking, stock movements, lot transformations, traceability, audit logs, and role/permission access control.
+Laravel 13 REST API for multi-branch poultry inventory operations, with source-lot intake, batch/barcode tracking, stock movements, lot transformations, traceability, audit logs, and role/permission access control.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ Laravel 12 REST API for multi-branch poultry inventory operations, with source-l
 
 ## Overview
 
-- Framework: Laravel 12
+- Framework: Laravel 13
 - Auth: Laravel Sanctum tokens
 - RBAC: Spatie Laravel Permission
 - Timezone: `Africa/Kampala`
@@ -62,8 +62,8 @@ Laravel 12 REST API for multi-branch poultry inventory operations, with source-l
 
 ### Runtime
 
-- PHP `^8.2`
-- Laravel `^12.0`
+- PHP `^8.3`
+- Laravel `^13.0`
 
 ### Main Packages
 
@@ -75,16 +75,16 @@ Laravel 12 REST API for multi-branch poultry inventory operations, with source-l
 
 ### Dev Tooling
 
-- `pestphp/pest` `^3.0`
-- `pestphp/pest-plugin-laravel` `^3.0`
+- `pestphp/pest` `^4.7`
+- `pestphp/pest-plugin-laravel` `^4.1`
 - `laravel/pint` `^1.24`
 - `laravel/sail` `^1.41`
-- `laravel/boost` `^2.1`
+- `laravel/boost` `^2.4`
 - `laravel/pail` `^1.2.2`
 
 ## Requirements
 
-- PHP 8.2+
+- PHP 8.3+
 - Composer
 - MySQL
 - Node.js + npm
@@ -118,7 +118,8 @@ php artisan pail
 
 ## Authentication & Authorization
 
-- Public auth/OTP endpoints are available without token.
+- Public auth/OTP endpoints are available without token and are rate limited.
+- Public registration creates an account without assigning privileged roles; grant access through the RBAC user management flow or seeders.
 - All other endpoints are under `auth:sanctum`.
 - Most authenticated endpoints also require permission middleware (for example `permission:products.view,api`).
 
@@ -231,6 +232,8 @@ Main tables currently in use:
 - `password_otps`
 
 ## Testing
+
+The suite includes feature coverage for auth/RBAC behavior, barcode print logging, inventory validation, source-lot intake, and transformation flows.
 
 Run all tests:
 
