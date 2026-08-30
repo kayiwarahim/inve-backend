@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PaginatedIndexRequest;
+use App\Http\Requests\Api\StoreBatchRequest;
+use App\Http\Requests\Api\UpdateBatchRequest;
 use App\Models\Barcode;
 use App\Models\Batch;
 use App\Services\BarcodeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Picqer\Barcode\BarcodeGeneratorPNG;
@@ -24,31 +25,31 @@ class BatchController extends Controller
             ->paginate($request->perPage());
     }
 
-    public function store(Request $request, BarcodeService $barcodeService)
+    public function store(StoreBatchRequest $request, BarcodeService $barcodeService)
     {
-        $batch = DB::transaction(function () use ($request, $barcodeService) {
+        $data = $request->validated();
 
+        $batch = DB::transaction(function () use ($data, $barcodeService) {
             $batch = Batch::create([
-                'product_id' => $request->product_id,
+                'product_id' => $data['product_id'],
                 'batch_code' => $this->generateBatchCode(),
-                'manufactured_at' => $request->manufactured_at,
-                'expires_at' => $request->expires_at,
+                'manufactured_at' => $data['manufactured_at'] ?? now()->toDateString(),
+                'expires_at' => $data['expires_at'] ?? null,
             ]);
 
             $batch->batchStocks()->create([
-                'warehouse_id' => $request->warehouse_id,
-                'quantity' => $request->quantity,
+                'warehouse_id' => $data['warehouse_id'],
+                'quantity' => $data['quantity'],
             ]);
 
             $batch->stockTransactions()->create([
                 'type' => 'in',
-                'quantity' => $request->quantity,
-                'to_warehouse_id' => $request->warehouse_id,
+                'quantity' => $data['quantity'],
+                'to_warehouse_id' => $data['warehouse_id'],
                 'reason' => 'Initial receipt',
                 'user_id' => Auth::id(),
             ]);
 
-            // Generate barcode
             $barcodeService->generateForBatch($batch->fresh('product'));
 
             return $batch;
@@ -73,10 +74,10 @@ class BatchController extends Controller
         return $batch;
     }
 
-    public function update(Request $request, $batch_code)
+    public function update(UpdateBatchRequest $request, $batch_code)
     {
         $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
-        $batch->update($request->only(['manufactured_at', 'expires_at']));
+        $batch->update($request->validated());
 
         return $batch;
     }
@@ -84,6 +85,23 @@ class BatchController extends Controller
     public function destroy($batch_code)
     {
         $batch = Batch::where('batch_code', $batch_code)->firstOrFail();
+
+        // Reject deletion if batch has active stock in any warehouse.
+        $activeStock = $batch->batchStocks()->where('quantity', '>', 0)->exists();
+        if ($activeStock) {
+            return response()->json([
+                'message' => 'Cannot delete batch with active stock.',
+            ], 422);
+        }
+
+        // Reject deletion if batch has been referenced in any transformation.
+        $hasTransformationLineage = $batch->transformationLines()->exists();
+        if ($hasTransformationLineage) {
+            return response()->json([
+                'message' => 'Cannot delete batch that has been used in transformations.',
+            ], 422);
+        }
+
         $batch->delete();
 
         return response()->json(null, 204);
