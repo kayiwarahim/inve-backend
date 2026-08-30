@@ -43,6 +43,20 @@ class ProductSeeder extends Seeder
                 'description' => 'Breast fillet',
             ],
             [
+                'name' => 'Drumsticks',
+                'sku' => 'DRM',
+                'unit' => 'kg',
+                'category' => 'both',
+                'description' => 'Drumsticks',
+            ],
+            [
+                'name' => 'Mixed Portions',
+                'sku' => 'MIX',
+                'unit' => 'kg',
+                'category' => 'both',
+                'description' => 'Mixed Portions',
+            ],
+            [
                 'name' => 'Waste',
                 'sku' => 'WST',
                 'unit' => 'kg',
