@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PaginatedIndexRequest;
+use App\Http\Requests\Api\StoreBarcodeRequest;
+use App\Http\Requests\Api\UpdateBarcodeRequest;
 use App\Models\Barcode;
 use App\Models\Batch;
 use App\Services\BarcodeService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class BarcodeController extends Controller
@@ -23,13 +24,11 @@ class BarcodeController extends Controller
             ->paginate($request->perPage());
     }
 
-    public function store(Request $request)
+    public function store(StoreBarcodeRequest $request)
     {
-        $request->validate([
-            'batch_id' => ['required', 'exists:batches,id'],
-        ]);
+        $data = $request->validated();
 
-        $batch = Batch::with(['product', 'barcode'])->findOrFail($request->integer('batch_id'));
+        $batch = Batch::with(['product', 'barcode'])->findOrFail($data['batch_id']);
 
         if ($batch->barcode) {
             return response()->json([
@@ -55,13 +54,9 @@ class BarcodeController extends Controller
         return $barcode->load('batch.product');
     }
 
-    public function update(Request $request, Barcode $barcode)
+    public function update(UpdateBarcodeRequest $request, Barcode $barcode)
     {
-        $data = $request->validate([
-            'type' => ['required', 'string', 'max:50'],
-        ]);
-
-        $barcode->update($data);
+        $barcode->update($request->validated());
 
         return $barcode->fresh('batch.product');
     }
