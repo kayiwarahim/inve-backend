@@ -24,11 +24,11 @@ use App\Http\Controllers\Inventory\BarcodePrintController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes (no auth or permissions needed)
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/password/request-otp', [PasswordOtpController::class, 'requestOtp'])->middleware('throttle:5,1');
-Route::post('/password/verify-otp', [PasswordOtpController::class, 'verifyOtp']);
-Route::post('/password/reset', [PasswordOtpController::class, 'resetPassword']);
+Route::post('/password/verify-otp', [PasswordOtpController::class, 'verifyOtp'])->middleware('throttle:5,1');
+Route::post('/password/reset', [PasswordOtpController::class, 'resetPassword'])->middleware('throttle:5,1');
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -107,9 +107,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Suppliers
     Route::get('/suppliers', [SupplierController::class, 'index'])->middleware('permission:suppliers.view,api');
     Route::post('/suppliers', [SupplierController::class, 'store'])->middleware('permission:suppliers.create,api');
-    Route::get('/suppliers/{supplier}', [SupplierController::class, 'show'])->middleware('permission:suppliers.view,api');
-    Route::put('/suppliers/{supplier}', [SupplierController::class, 'update'])->middleware('permission:suppliers.edit,api');
-    Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy'])->middleware('permission:suppliers.delete,api');
+    Route::get('/suppliers/{id}', [SupplierController::class, 'show'])->middleware('permission:suppliers.view,api');
+    Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->middleware('permission:suppliers.edit,api');
+    Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy'])->middleware('permission:suppliers.delete,api');
 
     // Source lots
     Route::get('/source-lots', [SourceLotController::class, 'index'])->middleware('permission:source-lots.view,api');
