@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PaginatedIndexRequest;
+use App\Http\Requests\Api\StoreProductRequest;
+use App\Http\Requests\Api\UpdateProductRequest;
 use App\Models\Product;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
@@ -38,17 +39,9 @@ class ProductController extends Controller
      * POST /api/products
      * Create a new product
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreProductRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'sku' => 'required|string|unique:products,sku',
-            'name' => 'required|string',
-            'unit' => 'required|string',
-            'category' => 'nullable|string|in:input,output,both',
-            'description' => 'nullable|string',
-        ]);
-
-        $product = Product::create($data);
+        $product = Product::create($request->validated());
 
         return response()->json([
             'message' => 'Product created successfully',
@@ -71,19 +64,11 @@ class ProductController extends Controller
      * PUT/PATCH /api/products/{id}
      * Update product
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateProductRequest $request, int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
 
-        $data = $request->validate([
-            'sku' => 'required|string|unique:products,sku,'.$product->id,
-            'name' => 'required|string',
-            'unit' => 'required|string',
-            'category' => 'nullable|string|in:input,output,both',
-            'description' => 'nullable|string',
-        ]);
-
-        $product->update($data);
+        $product->update($request->validated());
 
         return response()->json([
             'message' => 'Product updated successfully',
@@ -98,6 +83,23 @@ class ProductController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
+
+        // Reject deletion if product has any batches in the system.
+        $hasBatches = $product->batches()->exists();
+        if ($hasBatches) {
+            return response()->json([
+                'message' => 'Cannot delete product with active batches in the system.',
+            ], 422);
+        }
+
+        // Reject deletion if product is used in any transformation lines.
+        $usedInTransformations = $product->transformationLines()->exists();
+        if ($usedInTransformations) {
+            return response()->json([
+                'message' => 'Cannot delete product that is used in transformations.',
+            ], 422);
+        }
+
         $product->delete();
 
         return response()->json([
