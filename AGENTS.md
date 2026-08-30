@@ -222,4 +222,4 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - Do NOT delete tests without approval.
 - CRITICAL: ALWAYS use `search-docs` tool for version-specific Pest documentation and updated code examples.
 - IMPORTANT: Activate `pest-testing` every time you're working with a Pest or testing-related task.
-</laravel-boost-guidelines>
+  </laravel-boost-guidelines>

@@ -29,42 +29,44 @@ Laravel 12 REST API for multi-branch poultry inventory operations, with source-l
 - OTP password reset flow (request, verify, reset)
 - User, role, and permission management (RBAC)
 - Master data management:
-  - Branches
-  - Warehouses
-  - Suppliers
-  - Products (with category validation for input/output workflows)
-  - Process steps
+    - Branches
+    - Warehouses
+    - Suppliers
+    - Products (with category validation for input/output workflows)
+    - Process steps
 - Batch lifecycle:
-  - Batch CRUD
-  - Barcode generation and lookup
-  - Barcode printing
+    - Batch CRUD
+    - Barcode generation and lookup
+    - Barcode printing
 - Source-lot intake:
-  - Captures receiving metrics (`gross_car_weight_kg`, tray count/weight, net received weight)
-  - Auto-creates root batch, stock entry, and stock transaction
+    - Captures receiving metrics (`gross_car_weight_kg`, tray count/weight, net received weight)
+    - Auto-creates root batch, stock entry, and stock transaction
 - Inventory operations:
-  - Stock in
-  - Stock out
-  - Warehouse-to-warehouse transfer
+    - Stock in
+    - Stock out
+    - Warehouse-to-warehouse transfer
 - Lot transformations:
-  - Input/output/byproduct/waste lines
-  - Mass-balance validation
-  - Input vs output warehouse flow
-  - Mixed portions replenishment endpoint
+    - Input/output/byproduct/waste lines
+    - Mass-balance validation
+    - Input vs output warehouse flow
+    - Mixed portions replenishment endpoint
 - Traceability:
-  - Trace a code back through transformation history to related source lots
+    - Trace a code back through transformation history to related source lots
 - Reporting:
-  - Stock levels and scan lookups
-  - Stock level export
-  - Dashboard product stock, movement history, and recent transfers
-  - Audit log listing with pagination/filtering
+    - Stock levels and scan lookups
+    - Stock level export
+    - Dashboard product stock, movement history, and recent transfers
+    - Audit log listing with pagination/filtering
 
 ## Tech Stack
 
 ### Runtime
+
 - PHP `^8.2`
 - Laravel `^12.0`
 
 ### Main Packages
+
 - `laravel/sanctum` `^4.3`
 - `spatie/laravel-permission` `^6.9`
 - `picqer/php-barcode-generator` `^3.2`
@@ -72,6 +74,7 @@ Laravel 12 REST API for multi-branch poultry inventory operations, with source-l
 - `maatwebsite/excel` `3.1.*`
 
 ### Dev Tooling
+
 - `pestphp/pest` `^3.0`
 - `pestphp/pest-plugin-laravel` `^3.0`
 - `laravel/pint` `^1.24`
@@ -142,11 +145,11 @@ Base prefix: `/api`
 
 - Users: `GET/POST /users`, `GET/PUT/DELETE /users/{user}`
 - User access meta: `GET /users/access-meta`
-- User roles/permissions: 
-  - `PUT /users/{user}/role`
-  - `PUT /users/{user}/roles`
-  - `PUT /users/{user}/permissions`
-  - `DELETE /users/{user}/permissions`
+- User roles/permissions:
+    - `PUT /users/{user}/role`
+    - `PUT /users/{user}/roles`
+    - `PUT /users/{user}/permissions`
+    - `DELETE /users/{user}/permissions`
 - Roles: `GET/POST /roles`, `GET/PUT/DELETE /roles/{role}`
 - Permissions: `GET/POST /permissions`, `GET/PUT/DELETE /permissions/{permission}`
 
@@ -162,44 +165,44 @@ Base prefix: `/api`
 
 - Batches: `GET/POST /batches`, `GET/PUT/DELETE /batches/{batch_code}`
 - Batch barcode print endpoints:
-  - `GET /batches/{id}/print-barcode`
-  - `POST /batches/{batch}/print`
+    - `GET /batches/{id}/print-barcode`
+    - `POST /batches/{batch}/print`
 - Search: `GET /search/{code}`
 - Barcodes:
-  - `GET/POST /barcodes`
-  - `GET /barcodes/code/{code}`
-  - `GET/PUT/DELETE /barcodes/{barcode}`
+    - `GET/POST /barcodes`
+    - `GET /barcodes/code/{code}`
+    - `GET/PUT/DELETE /barcodes/{barcode}`
 - Generic scan: `GET /scan/{code}`
 
 ### Source Lots, Transformations, Traceability
 
 - Source lots:
-  - `GET /source-lots`
-  - `POST /source-lots`
-  - `GET /source-lots/{sourceLot}`
+    - `GET /source-lots`
+    - `POST /source-lots`
+    - `GET /source-lots/{sourceLot}`
 - Lot transformations:
-  - `GET /lot-transformations`
-  - `POST /lot-transformations`
-  - `POST /lot-transformations/repack-mixed`
+    - `GET /lot-transformations`
+    - `POST /lot-transformations`
+    - `POST /lot-transformations/repack-mixed`
 - Traceability: `GET /trace/{code}`
 
 ### Stock & Reporting
 
 - Stock movements:
-  - `POST /stock/in/{batch_code}`
-  - `POST /stock/out/{batch_code}`
-  - `POST /stock/transfer/{batch_code}`
+    - `POST /stock/in/{batch_code}`
+    - `POST /stock/out/{batch_code}`
+    - `POST /stock/transfer/{batch_code}`
 - Stock levels:
-  - `GET /stock-levels`
-  - `GET /stock-levels/export`
-  - `GET /stock-levels/warehouse/{warehouseId}/batch/{batchId}`
-  - `GET /stock-levels/scan/{barcode}`
+    - `GET /stock-levels`
+    - `GET /stock-levels/export`
+    - `GET /stock-levels/warehouse/{warehouseId}/batch/{batchId}`
+    - `GET /stock-levels/scan/{barcode}`
 - Dashboard:
-  - `GET /dashboard/product-stock/{product_id}`
-  - `GET /dashboard/product-stock`
-  - `GET /dashboard/recent-transfers`
-  - `GET /dashboard/movement-history`
-  - `GET /dashboard/warehouse-products/{warehouse_id}`
+    - `GET /dashboard/product-stock/{product_id}`
+    - `GET /dashboard/product-stock`
+    - `GET /dashboard/recent-transfers`
+    - `GET /dashboard/movement-history`
+    - `GET /dashboard/warehouse-products/{warehouse_id}`
 - Audit logs: `GET /auditlogs`
 
 ## Core Data Model

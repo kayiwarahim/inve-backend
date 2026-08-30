@@ -1,7 +1,5 @@
 {
-    "agents": [
-        "kiro"
-    ],
+    "agents": ["kiro"],
     "cloud": false,
     "mcp": true,
     "nightwatch": false,

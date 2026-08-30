@@ -342,4 +342,3 @@ erDiagram
 - Primary active inventory ledger in current API logic is `batch_stocks` + `stock_transactions`.
 - `stocks`, `stock_movements`, `movement_approvals`, and `stock_snapshots` are legacy/support structures still present in schema.
 - Role/permission authorization is polymorphic via Spatie pivot tables (`model_type`, `model_id`), typically targeting `App\Models\User`.
-

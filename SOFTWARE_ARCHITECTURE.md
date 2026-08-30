@@ -50,25 +50,25 @@ Track-Flow backend is a Laravel 12 REST API for poultry/inventory traceability a
 ## 3.1 Layered Structure
 
 1. **HTTP/API Layer**
-   - Controllers in `app/Http/Controllers/Api`
-   - Routes in `routes/api.php`
-   - Middleware aliases set in `bootstrap/app.php`
+    - Controllers in `app/Http/Controllers/Api`
+    - Routes in `routes/api.php`
+    - Middleware aliases set in `bootstrap/app.php`
 
 2. **Validation Layer**
-   - Form Requests for newer/critical flows (users, suppliers, source lots, transformations, roles/permissions/process steps)
-   - Some controllers still use inline validation
+    - Form Requests for newer/critical flows (users, suppliers, source lots, transformations, roles/permissions/process steps)
+    - Some controllers still use inline validation
 
 3. **Domain/Business Layer**
-   - Logic primarily inside controllers
-   - Shared services: `BarcodeService`, `BarcodePrintService`
+    - Logic primarily inside controllers
+    - Shared services: `BarcodeService`, `BarcodePrintService`
 
 4. **Persistence Layer**
-   - Eloquent models + MySQL schema migrations
-   - Transactional writes for critical operations (`stock`, `transformation`, `source lot intake`)
+    - Eloquent models + MySQL schema migrations
+    - Transactional writes for critical operations (`stock`, `transformation`, `source lot intake`)
 
 5. **Integration Layer**
-   - Mail queue for OTP delivery
-   - Filesystem for barcode PNG storage (`storage/app/public/barcodes`)
+    - Mail queue for OTP delivery
+    - Filesystem for barcode PNG storage (`storage/app/public/barcodes`)
 
 ## 3.2 Request Lifecycle (Typical Protected API Call)
 
@@ -107,12 +107,12 @@ Track-Flow backend is a Laravel 12 REST API for poultry/inventory traceability a
 
 - Guard: `api`
 - Permissions enforced per endpoint using middleware:
-  - example: `permission:users.manage,api`
+    - example: `permission:users.manage,api`
 - User payload returns:
-  - `roles`
-  - `direct_permissions`
-  - effective `permissions` (role + direct)
-  - `effective_permissions` names
+    - `roles`
+    - `direct_permissions`
+    - effective `permissions` (role + direct)
+    - `effective_permissions` names
 
 ---
 
@@ -203,6 +203,7 @@ Track-Flow backend is a Laravel 12 REST API for poultry/inventory traceability a
 5. response returns token + user access envelope
 
 Notes:
+
 - current API style is token-based (not SPA cookie/CSRF flow)
 - API middleware no longer prepends Sanctum stateful middleware
 
@@ -212,11 +213,11 @@ Notes:
 2. validate branch-warehouse consistency
 3. validate product category allows input
 4. DB transaction:
-   - create `source_lots` record
-   - create root `batches` record linked to source lot
-   - create `batch_stocks` entry in selected warehouse
-   - create `stock_transactions` entry (`type=in`)
-   - generate barcode for the new batch
+    - create `source_lots` record
+    - create root `batches` record linked to source lot
+    - create `batch_stocks` entry in selected warehouse
+    - create `stock_transactions` entry (`type=in`)
+    - generate barcode for the new batch
 5. response returns source lot + batch + barcode
 
 ## 5.3 Direct Batch Creation Flow
@@ -250,18 +251,18 @@ Notes:
 
 1. `POST /api/lot-transformations` or `/api/lot-transformations/repack-mixed`
 2. validate:
-   - warehouse branch ownership
-   - mass-balance tolerance (`<= 0.02kg` drift)
-   - input/output product category compatibility
+    - warehouse branch ownership
+    - mass-balance tolerance (`<= 0.02kg` drift)
+    - input/output product category compatibility
 3. DB transaction:
-   - create transformation header
-   - consume input stock rows (with `lockForUpdate`)
-   - delete depleted stocks
-   - create output/byproduct batches when needed
-   - increment destination stocks
-   - generate barcodes for newly materialized batches
-   - write line-level transformation rows (`input/output/byproduct/waste`)
-   - write stock transactions (`out` for inputs, `in` for outputs)
+    - create transformation header
+    - consume input stock rows (with `lockForUpdate`)
+    - delete depleted stocks
+    - create output/byproduct batches when needed
+    - increment destination stocks
+    - generate barcodes for newly materialized batches
+    - write line-level transformation rows (`input/output/byproduct/waste`)
+    - write stock transactions (`out` for inputs, `in` for outputs)
 4. return fully expanded transformation resource
 
 ## 5.7 Traceability Flow
@@ -269,10 +270,10 @@ Notes:
 1. `GET /api/trace/{code}` resolves batch by barcode or batch code
 2. recursively traverses producing transformation lines
 3. builds lineage nodes including:
-   - process step metadata
-   - transformation timestamps
-   - input contribution percentages
-   - upstream nested ancestry
+    - process step metadata
+    - transformation timestamps
+    - input contribution percentages
+    - upstream nested ancestry
 4. emits current locations, movement history, full lineage tree, and unique source lots
 
 ---
@@ -327,35 +328,46 @@ Notes:
 ## 7.2 Main Operational Tables
 
 1. `users`
-   - identity, login, profile, branch assignment
+    - identity, login, profile, branch assignment
 2. `branches`
-   - business sites/logical locations
+    - business sites/logical locations
 3. `warehouses`
-   - physical stock nodes with type (`storage`, `transit`, `quarantine`)
+    - physical stock nodes with type (`storage`, `transit`, `quarantine`)
 4. `products`
-   - SKU master + `category` for transformation eligibility
+    - SKU master + `category` for transformation eligibility
 5. `suppliers`
-   - source-lot suppliers
+    - source-lot suppliers
 6. `source_lots`
-   - intake records of incoming raw/live material
+    - intake records of incoming raw/live material
 7. `batches`
-   - traceable production or source-intake units
+    - traceable production or source-intake units
 8. `barcodes`
-   - unique machine-readable identifiers per batch
+    - unique machine-readable identifiers per batch
 9. `batch_stocks`
-   - current quantity by `(batch_id, warehouse_id)` with unique composite key
+    - current quantity by `(batch_id, warehouse_id)` with unique composite key
 10. `stock_transactions`
-   - immutable movement journal (`in`, `out`, `transfer`, `adjustment`)
+
+- immutable movement journal (`in`, `out`, `transfer`, `adjustment`)
+
 11. `process_steps`
-   - transformation stage catalog and sequence
+
+- transformation stage catalog and sequence
+
 12. `lot_transformations`
-   - transformation event header
+
+- transformation event header
+
 13. `lot_transformation_lines`
-   - transformation inputs/outputs/byproducts/waste
+
+- transformation inputs/outputs/byproducts/waste
+
 14. `password_otps`
-   - temporary password reset OTP data
+
+- temporary password reset OTP data
+
 15. `personal_access_tokens`
-   - Sanctum API tokens
+
+- Sanctum API tokens
 
 ## 7.3 Access-Control Tables (Spatie)
 
@@ -410,8 +422,8 @@ These exist in schema/model but are not primary in current API flow:
 - unique constraint on `batch_stocks (batch_id, warehouse_id)`
 - branch ownership checks for transformation/intake warehouse use
 - product category checks:
-  - inputs require category in `input|both`
-  - outputs require category in `output|both`
+    - inputs require category in `input|both`
+    - outputs require category in `output|both`
 - transformation mass-balance check before commit
 
 ---
@@ -432,35 +444,35 @@ Traceability endpoint is a derived hierarchical read model assembled at request 
 ## 11. Known Gaps and Implementation Risks (Current State)
 
 1. **Route permission keys vs seeded permissions mismatch**
-   - routes currently use keys such as `roles.view`, `permissions.view`, `stock.view`
-   - `RolePermissionSeeder` currently seeds `users.*`, `reports.*`, etc., but not all of these new keys
-   - impact: unexpected `403 Forbidden` until permissions are seeded/assigned consistently
+    - routes currently use keys such as `roles.view`, `permissions.view`, `stock.view`
+    - `RolePermissionSeeder` currently seeds `users.*`, `reports.*`, etc., but not all of these new keys
+    - impact: unexpected `403 Forbidden` until permissions are seeded/assigned consistently
 
 2. **Mixed validation style**
-   - newer controllers use Form Requests, older ones still use inline validation or minimal checks
-   - impact: uneven API validation rigor and error consistency
+    - newer controllers use Form Requests, older ones still use inline validation or minimal checks
+    - impact: uneven API validation rigor and error consistency
 
 3. **Dual inventory schema history**
-   - both `stocks` and `batch_stocks` ecosystems exist
-   - current API primarily uses `batch_stocks` + `stock_transactions`
-   - impact: onboarding confusion if not documented clearly
+    - both `stocks` and `batch_stocks` ecosystems exist
+    - current API primarily uses `batch_stocks` + `stock_transactions`
+    - impact: onboarding confusion if not documented clearly
 
 4. **Stock-level endpoint behavior**
-   - `/api/stock-levels` currently returns raw rows (including zero-quantity rows) unless filtered at caller level
-   - impact: UI may show locations where stock is already depleted
+    - `/api/stock-levels` currently returns raw rows (including zero-quantity rows) unless filtered at caller level
+    - impact: UI may show locations where stock is already depleted
 
 5. **Documentation drift risk**
-   - existing `README.md` describes routes/features that differ from current `routes/api.php`
+    - existing `README.md` describes routes/features that differ from current `routes/api.php`
 
 ---
 
 ## 12. Recommended Documentation/Architecture Artifacts to Add Next
 
 1. Sequence diagrams:
-   - source-lot intake
-   - transformation
-   - transfer
-   - traceability query recursion
+    - source-lot intake
+    - transformation
+    - transfer
+    - traceability query recursion
 2. ER diagram (MySQL workbench/dbdiagram)
 3. Permission matrix (role -> permission mapping)
 4. API contract examples (request/response payload catalog)
@@ -477,4 +489,3 @@ Traceability endpoint is a derived hierarchical read model assembled at request 
 - Stock domain: `StockMovementController.php`, `StockLevelController.php`, `DashboardController.php`
 - Barcode domain: `BarcodeController.php`, `ScanController.php`, `app/Services/BarcodeService.php`
 - RBAC seed baseline: `database/seeders/RolePermissionSeeder.php`
-
