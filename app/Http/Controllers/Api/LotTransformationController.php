@@ -120,6 +120,41 @@ class LotTransformationController extends Controller
             ], 422);
         }
 
+        $inputBatchIds = [];
+        foreach ($payload['inputs'] as $line) {
+            $resolvedBatchId = $line['batch_id'] ?? null;
+            if (empty($resolvedBatchId) && ! empty($line['source_lot_id'])) {
+                $resolvedBatchId = Batch::query()->where('source_lot_id', $line['source_lot_id'])->value('id');
+            }
+
+            if ($resolvedBatchId !== null) {
+                $normalizedBatchId = (int) $resolvedBatchId;
+                if (in_array($normalizedBatchId, $inputBatchIds, true)) {
+                    return response()->json([
+                        'message' => 'Duplicate batch references are not allowed within a single transformation.',
+                    ], 422);
+                }
+
+                $inputBatchIds[] = $normalizedBatchId;
+            }
+        }
+
+        $outputBatchIds = [];
+        foreach ($payload['outputs'] as $line) {
+            $resolvedBatchId = $line['batch_id'] ?? null;
+
+            if ($resolvedBatchId !== null) {
+                $normalizedBatchId = (int) $resolvedBatchId;
+                if (in_array($normalizedBatchId, $outputBatchIds, true)) {
+                    return response()->json([
+                        'message' => 'Duplicate output batch references are not allowed within a single transformation.',
+                    ], 422);
+                }
+
+                $outputBatchIds[] = $normalizedBatchId;
+            }
+        }
+
         $inputTotal = collect($payload['inputs'])->sum(fn (array $line): float => (float) $line['weight_kg']);
         $outputTotal = collect($payload['outputs'])->sum(fn (array $line): float => (float) $line['weight_kg']);
         $byproductsTotal = collect($payload['byproducts'] ?? [])->sum(fn (array $line): float => (float) $line['weight_kg']);
@@ -163,6 +198,7 @@ class LotTransformationController extends Controller
                 $batch = $this->resolveInputBatch($inputLine);
                 $this->assertInputLineProductConsistency($inputLine, $batch);
                 $this->assertProductCanBeInput((int) $batch->product_id);
+                $this->assertBatchNotExpired($batch);
                 $stock = $batch->batchStocks()
                     ->where('warehouse_id', $inputWarehouseId)
                     ->lockForUpdate()
@@ -290,12 +326,22 @@ class LotTransformationController extends Controller
                 }
             } else {
                 $this->assertProductCanBeOutput((int) $line['product_id']);
+                $manufacturingDate = $line['manufactured_at'] ?? now()->toDateString();
+                $expirationDate = $line['expires_at'] ?? null;
+
+                // Validate that expiration date is not before manufacturing date
+                if ($expirationDate !== null) {
+                    if (strtotime($expirationDate) < strtotime($manufacturingDate)) {
+                        abort(422, 'Output batch expiration date cannot be before manufactured date.');
+                    }
+                }
+
                 $batch = Batch::query()->create([
                     'product_id' => $line['product_id'],
                     'source_lot_id' => null,
                     'batch_code' => $this->generateOutputBatchCode($lineType),
-                    'manufactured_at' => $line['manufactured_at'] ?? now()->toDateString(),
-                    'expires_at' => $line['expires_at'] ?? null,
+                    'manufactured_at' => $manufacturingDate,
+                    'expires_at' => $expirationDate,
                 ]);
             }
 
@@ -355,6 +401,13 @@ class LotTransformationController extends Controller
 
         if (! $product->canBeOutput()) {
             abort(422, 'Selected product is not allowed as transformation output.');
+        }
+    }
+
+    private function assertBatchNotExpired(Batch $batch): void
+    {
+        if ($batch->expires_at && $batch->expires_at < now()->toDateString()) {
+            abort(422, 'Cannot use expired batch in transformation.');
         }
     }
 }
