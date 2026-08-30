@@ -30,8 +30,6 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $user->syncRoles('admin');
-
         $token = $user->createToken('api-token')->plainTextToken;
 
         $user->load(['roles', 'permissions']);
