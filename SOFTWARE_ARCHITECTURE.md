@@ -11,13 +11,13 @@ This document describes the current backend architecture of the `inve-backend` s
 - security and access control model
 - known implementation gaps and technical risks
 
-The content is based on the current codebase state in this repository as of **March 1, 2026**.
+The content is based on the current codebase state in this repository as of **August 30, 2026**.
 
 ---
 
 ## 2. System Overview
 
-Track-Flow backend is a Laravel 12 REST API for poultry/inventory traceability and warehouse operations.
+Track-Flow backend is a Laravel 13 REST API for poultry/inventory traceability and warehouse operations.
 
 ### 2.1 Core Business Capabilities
 
@@ -34,8 +34,8 @@ Track-Flow backend is a Laravel 12 REST API for poultry/inventory traceability a
 
 ### 2.2 Technology Stack
 
-- Framework: Laravel 12
-- Language: PHP 8.2+
+- Framework: Laravel 13
+- Language: PHP 8.3+
 - Auth: Laravel Sanctum (token-based API usage)
 - Authorization: `spatie/laravel-permission`
 - Barcode: `picqer/php-barcode-generator`
@@ -197,10 +197,11 @@ Track-Flow backend is a Laravel 12 REST API for poultry/inventory traceability a
 ## 5.1 Login and Token Flow
 
 1. client calls `POST /api/login` with email/password
-2. backend verifies credentials
-3. old token may be trimmed (max ~3 active tokens behavior)
-4. Sanctum token is generated with `['*']` abilities and expiry
-5. response returns token + user access envelope
+2. route-level throttling limits repeated attempts
+3. backend verifies credentials
+4. old token may be trimmed (max ~3 active tokens behavior)
+5. Sanctum token is generated with `['*']` abilities and expiry
+6. response returns token + user access envelope
 
 Notes:
 
@@ -287,6 +288,8 @@ Notes:
 - `POST /api/password/request-otp`
 - `POST /api/password/verify-otp`
 - `POST /api/password/reset`
+
+These public endpoints use route-level throttling.
 
 ## 6.2 Protected Domains (under `auth:sanctum`)
 
@@ -395,11 +398,13 @@ These exist in schema/model but are not primary in current API flow:
 
 - Sanctum personal access tokens
 - protected routes use `auth:sanctum`
+- public auth and password-reset routes are rate limited
 
 ## 8.2 Authorization
 
 - Spatie middleware aliases configured in `bootstrap/app.php`
 - route-level permission strings control access
+- public registration does not grant an administrator role by default
 
 ## 8.3 CORS
 
@@ -418,7 +423,7 @@ These exist in schema/model but are not primary in current API flow:
 ## 9. Data Integrity and Consistency Controls
 
 - DB transactions around stock and transformation write sets
-- row-level lock (`lockForUpdate`) during transformation input consumption
+- row-level lock (`lockForUpdate`) during stock-out, stock-transfer, and transformation input consumption
 - unique constraint on `batch_stocks (batch_id, warehouse_id)`
 - branch ownership checks for transformation/intake warehouse use
 - product category checks:
@@ -443,10 +448,10 @@ Traceability endpoint is a derived hierarchical read model assembled at request 
 
 ## 11. Known Gaps and Implementation Risks (Current State)
 
-1. **Route permission keys vs seeded permissions mismatch**
-    - routes currently use keys such as `roles.view`, `permissions.view`, `stock.view`
-    - `RolePermissionSeeder` currently seeds `users.*`, `reports.*`, etc., but not all of these new keys
-    - impact: unexpected `403 Forbidden` until permissions are seeded/assigned consistently
+1. **Auth/RBAC coverage is still uneven**
+    - new smoke coverage verifies protected inventory endpoints reject unauthenticated and unauthorized requests
+    - many older feature tests still bypass middleware to focus on domain behavior
+    - impact: route permission regressions may still slip through unless RBAC coverage is expanded route-by-route
 
 2. **Mixed validation style**
     - newer controllers use Form Requests, older ones still use inline validation or minimal checks
@@ -461,8 +466,9 @@ Traceability endpoint is a derived hierarchical read model assembled at request 
     - `/api/stock-levels` currently returns raw rows (including zero-quantity rows) unless filtered at caller level
     - impact: UI may show locations where stock is already depleted
 
-5. **Documentation drift risk**
-    - existing `README.md` describes routes/features that differ from current `routes/api.php`
+5. **Controller-heavy business logic**
+    - stock and transformation flows contain substantial orchestration directly in controllers
+    - impact: future changes may be harder to test in isolation unless service-level boundaries are introduced
 
 ---
 
