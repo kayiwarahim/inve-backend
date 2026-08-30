@@ -29,13 +29,16 @@ class SupplierController extends Controller
         ], 200);
     }
 
-    public function show(Supplier $supplier): JsonResponse
+    public function show(int $id): JsonResponse
     {
+        $supplier = Supplier::findOrFail($id);
+
         return response()->json($supplier, 200);
     }
 
-    public function update(UpdateSupplierRequest $request, Supplier $supplier): JsonResponse
+    public function update(UpdateSupplierRequest $request, int $id): JsonResponse
     {
+        $supplier = Supplier::findOrFail($id);
         $supplier->update($request->validated());
 
         return response()->json([
@@ -44,8 +47,18 @@ class SupplierController extends Controller
         ], 200);
     }
 
-    public function destroy(Supplier $supplier): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
+        $supplier = Supplier::findOrFail($id);
+
+        // Check if supplier has any source lots.
+        $hasSourceLots = $supplier->sourceLots()->exists();
+        if ($hasSourceLots) {
+            return response()->json([
+                'message' => 'Cannot delete supplier with active source lots.',
+            ], 422);
+        }
+
         $supplier->delete();
 
         return response()->json([

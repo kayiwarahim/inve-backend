@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Api;
 
-use App\Models\Supplier;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,8 +14,7 @@ class UpdateSupplierRequest extends FormRequest
 
     public function rules(): array
     {
-        /** @var Supplier $supplier */
-        $supplier = $this->route('supplier');
+        $id = $this->route('id');
 
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -25,7 +23,7 @@ class UpdateSupplierRequest extends FormRequest
                 'required',
                 'string',
                 'max:80',
-                Rule::unique('suppliers', 'code')->ignore($supplier->id),
+                Rule::unique('suppliers', 'code')->ignore($id),
             ],
             'phone' => ['sometimes', 'nullable', 'string', 'max:40'],
             'email' => ['sometimes', 'nullable', 'email', 'max:255'],
