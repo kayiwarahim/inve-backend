@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PaginatedIndexRequest;
+use App\Http\Requests\Api\StoreBranchRequest;
+use App\Http\Requests\Api\UpdateBranchRequest;
 use App\Models\Branch;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class BranchController extends Controller
 {
@@ -27,15 +28,9 @@ class BranchController extends Controller
      * POST /api/branches
      * Create a new branch
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreBranchRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => 'required|string',
-            'code' => 'required|string|unique:branches,code',
-            'location' => 'nullable|string',
-        ]);
-
-        $branch = Branch::create($data);
+        $branch = Branch::create($request->validated());
 
         return response()->json([
             'message' => 'Branch created successfully',
@@ -58,17 +53,11 @@ class BranchController extends Controller
      * PUT/PATCH /api/branches/{id}
      * Update branch
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateBranchRequest $request, int $id): JsonResponse
     {
         $branch = Branch::findOrFail($id);
 
-        $data = $request->validate([
-            'name' => 'required|string',
-            'code' => 'required|string|unique:branches,code,'.$branch->id,
-            'location' => 'nullable|string',
-        ]);
-
-        $branch->update($data);
+        $branch->update($request->validated());
 
         return response()->json([
             'message' => 'Branch updated successfully',
@@ -83,6 +72,14 @@ class BranchController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $branch = Branch::findOrFail($id);
+
+        // Check if branch has any warehouses.
+        $hasWarehouses = $branch->warehouses()->exists();
+        if ($hasWarehouses) {
+            return response()->json([
+                'message' => 'Cannot delete branch with active warehouses.',
+            ], 422);
+        }
 
         $branch->delete();
 
