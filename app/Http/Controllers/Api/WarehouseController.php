@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PaginatedIndexRequest;
+use App\Http\Requests\Api\StoreWarehouseRequest;
+use App\Http\Requests\Api\UpdateWarehouseRequest;
 use App\Models\Warehouse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class WarehouseController extends Controller
 {
@@ -27,16 +28,9 @@ class WarehouseController extends Controller
      * POST /api/warehouses
      * Create a new warehouse
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreWarehouseRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'name' => 'required|string',
-            'code' => 'required|string|unique:warehouses,code',
-            'type' => 'required|string',
-        ]);
-
-        $warehouse = Warehouse::create($data);
+        $warehouse = Warehouse::create($request->validated());
 
         return response()->json([
             'message' => 'Warehouse created successfully',
@@ -59,18 +53,11 @@ class WarehouseController extends Controller
      * PUT/PATCH /api/warehouses/{id}
      * Update warehouse
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateWarehouseRequest $request, int $id): JsonResponse
     {
         $warehouse = Warehouse::findOrFail($id);
 
-        $data = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'name' => 'required|string',
-            'code' => 'required|string|unique:warehouses,code,'.$warehouse->id,
-            'type' => 'required|string',
-        ]);
-
-        $warehouse->update($data);
+        $warehouse->update($request->validated());
 
         return response()->json([
             'message' => 'Warehouse updated successfully',
@@ -85,6 +72,15 @@ class WarehouseController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $warehouse = Warehouse::findOrFail($id);
+
+        // Check if warehouse has any batch stocks (active or historical).
+        $hasBatchStocks = $warehouse->batchStocks()->exists();
+        if ($hasBatchStocks) {
+            return response()->json([
+                'message' => 'Cannot delete warehouse with active stock.',
+            ], 422);
+        }
+
         $warehouse->delete();
 
         return response()->json([
