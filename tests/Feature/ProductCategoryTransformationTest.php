@@ -168,3 +168,181 @@ it('rejects invalid product categories in transformation input and output sectio
         'message' => 'Selected product is not allowed as transformation output.',
     ]);
 });
+
+it('rejects duplicate input batches in a single transformation payload', function () {
+    $this->withoutMiddleware();
+    Storage::fake('public');
+
+    $branch = Branch::query()->create([
+        'name' => 'Main Branch',
+        'code' => 'MB-DUP',
+        'location' => 'Kampala',
+    ]);
+
+    $inputWarehouse = Warehouse::query()->create([
+        'branch_id' => $branch->id,
+        'name' => 'Input Warehouse',
+        'code' => 'IN-DUP',
+        'type' => 'storage',
+    ]);
+
+    $outputWarehouse = Warehouse::query()->create([
+        'branch_id' => $branch->id,
+        'name' => 'Output Warehouse',
+        'code' => 'OUT-DUP',
+        'type' => 'storage',
+    ]);
+
+    $inputProduct = Product::query()->create([
+        'sku' => 'DUP-IN',
+        'name' => 'Live Chicken',
+        'unit' => 'kg',
+        'category' => 'input',
+    ]);
+
+    $outputProduct = Product::query()->create([
+        'sku' => 'DUP-OUT',
+        'name' => 'Processed Chicken',
+        'unit' => 'kg',
+        'category' => 'output',
+    ]);
+
+    $batch = Batch::query()->create([
+        'product_id' => $inputProduct->id,
+        'batch_code' => 'B-DUP-INPUT-001',
+        'manufactured_at' => now()->toDateString(),
+    ]);
+
+    $batch->batchStocks()->create([
+        'warehouse_id' => $inputWarehouse->id,
+        'quantity' => 10.000,
+    ]);
+
+    $step = ProcessStep::query()->create([
+        'code' => 'CUTTING',
+        'name' => 'Cutting',
+        'sequence' => 40,
+        'is_active' => true,
+    ]);
+
+    $response = $this->postJson('/api/lot-transformations', [
+        'process_step_id' => $step->id,
+        'branch_id' => $branch->id,
+        'input_warehouse_id' => $inputWarehouse->id,
+        'output_warehouse_id' => $outputWarehouse->id,
+        'transformed_at' => now()->toDateTimeString(),
+        'inputs' => [
+            [
+                'batch_id' => $batch->id,
+                'weight_kg' => 4.000,
+            ],
+            [
+                'batch_id' => $batch->id,
+                'weight_kg' => 4.000,
+            ],
+        ],
+        'outputs' => [
+            [
+                'product_id' => $outputProduct->id,
+                'weight_kg' => 8.000,
+            ],
+        ],
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonFragment([
+            'message' => 'Duplicate batch references are not allowed within a single transformation.',
+        ]);
+});
+
+it('rejects duplicate output batches in a single transformation payload', function () {
+    $this->withoutMiddleware();
+    Storage::fake('public');
+
+    $branch = Branch::query()->create([
+        'name' => 'Main Branch',
+        'code' => 'MB-OUT-DUP',
+        'location' => 'Kampala',
+    ]);
+
+    $inputWarehouse = Warehouse::query()->create([
+        'branch_id' => $branch->id,
+        'name' => 'Input Warehouse',
+        'code' => 'IN-OUT-DUP',
+        'type' => 'storage',
+    ]);
+
+    $outputWarehouse = Warehouse::query()->create([
+        'branch_id' => $branch->id,
+        'name' => 'Output Warehouse',
+        'code' => 'OUT-OUT-DUP',
+        'type' => 'storage',
+    ]);
+
+    $inputProduct = Product::query()->create([
+        'sku' => 'OUTDUP-IN',
+        'name' => 'Live Chicken',
+        'unit' => 'kg',
+        'category' => 'input',
+    ]);
+
+    $outputProduct = Product::query()->create([
+        'sku' => 'OUTDUP-OUT',
+        'name' => 'Processed Chicken',
+        'unit' => 'kg',
+        'category' => 'output',
+    ]);
+
+    $inputBatch = Batch::query()->create([
+        'product_id' => $inputProduct->id,
+        'batch_code' => 'B-OUT-DUP-INPUT-001',
+        'manufactured_at' => now()->toDateString(),
+    ]);
+
+    $inputBatch->batchStocks()->create([
+        'warehouse_id' => $inputWarehouse->id,
+        'quantity' => 10.000,
+    ]);
+
+    $outputBatch = Batch::query()->create([
+        'product_id' => $outputProduct->id,
+        'batch_code' => 'B-OUT-DUP-OUTPUT-001',
+        'manufactured_at' => now()->toDateString(),
+    ]);
+
+    $step = ProcessStep::query()->create([
+        'code' => 'CUTTING',
+        'name' => 'Cutting',
+        'sequence' => 45,
+        'is_active' => true,
+    ]);
+
+    $response = $this->postJson('/api/lot-transformations', [
+        'process_step_id' => $step->id,
+        'branch_id' => $branch->id,
+        'input_warehouse_id' => $inputWarehouse->id,
+        'output_warehouse_id' => $outputWarehouse->id,
+        'transformed_at' => now()->toDateTimeString(),
+        'inputs' => [
+            [
+                'batch_id' => $inputBatch->id,
+                'weight_kg' => 4.000,
+            ],
+        ],
+        'outputs' => [
+            [
+                'batch_id' => $outputBatch->id,
+                'weight_kg' => 2.000,
+            ],
+            [
+                'batch_id' => $outputBatch->id,
+                'weight_kg' => 2.000,
+            ],
+        ],
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonFragment([
+            'message' => 'Duplicate output batch references are not allowed within a single transformation.',
+        ]);
+});
