@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\Branch;
 use App\Models\Warehouse;
+use Illuminate\Database\Seeder;
 
 class BranchAndWarehouseSeeder extends Seeder
 {
@@ -14,6 +13,7 @@ class BranchAndWarehouseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Create branches
         $branch = [
             [
                 'name' => 'Kigunga Factory',
@@ -29,7 +29,7 @@ class BranchAndWarehouseSeeder extends Seeder
                 'name' => 'Industrial Area Depot',
                 'code' => 'IAD',
                 'location' => '5th Street, Kampala District',
-            ]
+            ],
         ];
 
         $warehouses = [
@@ -68,7 +68,7 @@ class BranchAndWarehouseSeeder extends Seeder
                 'name' => 'Cold Room',
                 'code' => 'KGF-CR',
                 'type' => 'storage',
-            ]
+            ],
         ];
 
         foreach ($branch as $branchData) {

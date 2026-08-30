@@ -26,6 +26,6 @@ class Barcode extends Model
 
     public function printLogs(): HasMany
     {
-        return $this->hasMany(BarcodePrintLog::class);
+        return $this->hasMany(BarcodePrintLog::class, 'batch_id', 'batch_id');
     }
 }

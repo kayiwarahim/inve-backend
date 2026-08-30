@@ -213,7 +213,7 @@ it('rejects source lot metrics that fail consistency checks', function () {
         'category' => 'input',
     ]);
 
-    // Test 1: Gross weight less than received weight (impossible).
+    // Test 1: Gross weight cannot cover chicken net weight plus tray tare.
     $invalidGrossWeight = $this->postJson('/api/source-lots', [
         'supplier_id' => $supplier->id,
         'branch_id' => $branch->id,
@@ -229,8 +229,8 @@ it('rejects source lot metrics that fail consistency checks', function () {
     $invalidGrossWeight->assertStatus(422)
         ->assertJsonValidationErrors(['gross_car_weight_kg']);
 
-    // Test 2: Tray metrics do not align with received weight (outside tolerance).
-    $invalidTrayMetrics = $this->postJson('/api/source-lots', [
+    // Test 2: Received weight is chicken net weight, not tray tare weight.
+    $validTrayTareMetrics = $this->postJson('/api/source-lots', [
         'supplier_id' => $supplier->id,
         'branch_id' => $branch->id,
         'gross_car_weight_kg' => 1800,
@@ -242,8 +242,17 @@ it('rejects source lot metrics that fail consistency checks', function () {
         'product_id' => $product->id,
     ]);
 
-    $invalidTrayMetrics->assertStatus(422)
-        ->assertJsonValidationErrors(['received_weight_kg']);
+    $validTrayTareMetrics->assertSuccessful()
+        ->assertJsonPath('data.source_lot.received_weight_kg', '300.000');
+
+    $createdSourceLot = SourceLot::query()
+        ->where('received_weight_kg', 300)
+        ->firstOrFail();
+    $rootBatch = Batch::query()
+        ->where('source_lot_id', $createdSourceLot->id)
+        ->firstOrFail();
+
+    expect((float) $rootBatch->batchStocks()->firstOrFail()->quantity)->toBe(300.0);
 });
 
 it('rejects batch deletion when batch has active stock', function () {

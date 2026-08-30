@@ -8,8 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BarcodePrintLog extends Model
 {
     protected $fillable = [
-        'barcode_id',
+        'batch_id',
         'printed_by',
+        'copies',
+        'printer_name',
+        'reason',
         'printed_at',
     ];
 
@@ -17,8 +20,13 @@ class BarcodePrintLog extends Model
         'printed_at' => 'datetime',
     ];
 
-    public function barcode(): BelongsTo
+    public function batch(): BelongsTo
     {
-        return $this->belongsTo(Barcode::class);
+        return $this->belongsTo(Batch::class);
+    }
+
+    public function printer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'printed_by');
     }
 }
