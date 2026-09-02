@@ -34,6 +34,8 @@ class AuthController extends Controller
 
         $user->load(['roles', 'permissions']);
 
+        activity()->causedBy($user)->log('User registered');
+
         return response()->json([
             'user' => $this->formatUserAccess($user),
             'token' => $token,
@@ -68,6 +70,8 @@ class AuthController extends Controller
             'last_login_at' => now(),
         ]);
         $user->load(['roles', 'permissions']);
+
+        activity()->causedBy($user)->log('User logged in');
 
         return response()->json([
             'message' => 'Logged in successfully',
@@ -113,6 +117,8 @@ class AuthController extends Controller
             'password' => $request->validated('password'),
         ]);
 
+        activity()->causedBy($user)->log('User changed password');
+
         return response()->json([
             'message' => 'Password changed successfully.',
         ]);
@@ -122,6 +128,8 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
+        activity()->causedBy($request->user())->log('User logged out');
+
         return response()->json(['message' => 'Logged out']);
     }
 
@@ -129,10 +137,14 @@ class AuthController extends Controller
     {
         $request->user()->tokens()->delete();
 
+        activity()->causedBy($request->user())->log('User logged out from all devices');
+
         return response()->json(['message' => 'Logged out from all devices']);
     }
 
     /**
+     * Format the user's access information.
+     *
      * @return array{
      *     id: int,
      *     name: string,
