@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Spatie\Activitylog\Models\Activity;
 
 uses(RefreshDatabase::class);
 
@@ -21,41 +21,17 @@ it('lists audit logs with pagination and filters', function () {
         'email' => 'bob@example.com',
     ]);
 
-    AuditLog::query()->create([
-        'user_id' => $alice->id,
-        'action' => 'POST api/products',
-        'auditable_type' => 'App\\Http\\Controllers\\Api\\ProductController@store',
-        'auditable_id' => 10,
-        'old_values' => ['name' => 'Old Product'],
-        'new_values' => ['status_code' => 200],
-        'ip_address' => '127.0.0.1',
-        'user_agent' => 'Pest',
-        'performed_at' => '2026-03-01 10:00:00',
-    ]);
+    createAuditActivity($alice, 'POST api/products', 'App\\Http\\Controllers\\Api\\ProductController@store', 10, [
+        'name' => 'Old Product',
+    ], '127.0.0.1', '2026-03-01 10:00:00');
 
-    AuditLog::query()->create([
-        'user_id' => $bob->id,
-        'action' => 'PUT api/products/10',
-        'auditable_type' => 'App\\Http\\Controllers\\Api\\ProductController@update',
-        'auditable_id' => 10,
-        'old_values' => ['name' => 'Product A'],
-        'new_values' => ['status_code' => 200],
-        'ip_address' => '127.0.0.2',
-        'user_agent' => 'Pest',
-        'performed_at' => '2026-03-02 10:00:00',
-    ]);
+    createAuditActivity($bob, 'PUT api/products/10', 'App\\Http\\Controllers\\Api\\ProductController@update', 10, [
+        'name' => 'Product A',
+    ], '127.0.0.2', '2026-03-02 10:00:00');
 
-    AuditLog::query()->create([
-        'user_id' => $alice->id,
-        'action' => 'DELETE api/products/11',
-        'auditable_type' => 'App\\Http\\Controllers\\Api\\ProductController@destroy',
-        'auditable_id' => 11,
-        'old_values' => ['name' => 'Product B'],
-        'new_values' => ['status_code' => 200],
-        'ip_address' => '127.0.0.3',
-        'user_agent' => 'Pest',
-        'performed_at' => '2026-03-02 15:00:00',
-    ]);
+    createAuditActivity($alice, 'DELETE api/products/11', 'App\\Http\\Controllers\\Api\\ProductController@destroy', 11, [
+        'name' => 'Product B',
+    ], '127.0.0.3', '2026-03-02 15:00:00');
 
     $response = $this->getJson('/api/auditlogs?per_page=10');
     $response->assertOk();
@@ -78,3 +54,36 @@ it('lists audit logs with pagination and filters', function () {
     $dateFiltered->assertOk();
     $dateFiltered->assertJsonPath('total', 2);
 });
+
+function createAuditActivity(
+    User $user,
+    string $action,
+    string $routeAction,
+    int $auditableId,
+    array $requestPayload,
+    string $ipAddress,
+    string $performedAt
+): void {
+    Activity::query()->create([
+        'log_name' => 'audit',
+        'description' => $action,
+        'subject_type' => null,
+        'subject_id' => null,
+        'event' => 'request',
+        'causer_type' => $user->getMorphClass(),
+        'causer_id' => $user->id,
+        'attribute_changes' => null,
+        'properties' => [
+            'route_action' => $routeAction,
+            'auditable_id' => $auditableId,
+            'request_payload' => $requestPayload,
+            'response' => [
+                'status_code' => 200,
+            ],
+            'ip_address' => $ipAddress,
+            'user_agent' => 'Pest',
+        ],
+        'created_at' => $performedAt,
+        'updated_at' => $performedAt,
+    ]);
+}
