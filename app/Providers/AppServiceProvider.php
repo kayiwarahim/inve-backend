@@ -2,17 +2,20 @@
 
 namespace App\Providers;
 
-use BackedEnum;
 use App\Services\BarcodeService;
+use BackedEnum;
 use DateTimeInterface;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Fortify;
 use Stringable;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        Fortify::ignoreRoutes();
         $this->app->singleton(BarcodeService::class);
     }
 
@@ -35,6 +39,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('login-account', function (Request $request): Limit {
+            $email = $request->input('email');
+
+            return Limit::perMinute(5)->by(hash('sha256', is_string($email) ? mb_strtolower(trim($email)) : 'invalid'));
+        });
+        RateLimiter::for('mfa-management', fn (Request $request): array => [
+            Limit::perMinute(5)->by('user:'.$request->user()->id),
+            Limit::perMinute(20)->by('ip:'.$request->ip()),
+        ]);
+
         Event::listen(RequestHandled::class, function (RequestHandled $event): void {
             $request = $event->request;
             $response = $event->response;
@@ -234,6 +248,10 @@ class AppServiceProvider extends ServiceProvider
             ->toString();
 
         return Str::contains($normalizedKey, [
+            'recovery_code',
+            'challenge',
+            'provisioning',
+            'qr_code',
             'api_key',
             'authorization',
             'cookie',
@@ -243,6 +261,6 @@ class AppServiceProvider extends ServiceProvider
             'token',
             'x_csrf_token',
             'x_xsrf_token',
-        ]);
+        ]) || $normalizedKey === 'code';
     }
 }

@@ -60,11 +60,16 @@ class UserController extends Controller
             ->except(['roles', 'permissions'])
             ->toArray();
 
-        if ($userData !== []) {
-            $user->update($userData);
-        }
+        $user->getConnection()->transaction(function () use ($user, $userData, $request): void {
+            $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
 
-        $this->syncUserAccess($user, $request->validated());
+            if ($userData !== []) {
+                $lockedUser->update($userData);
+            }
+
+            $this->syncUserAccess($lockedUser, $request->validated());
+        });
+        $user->refresh();
         $user->load(['roles', 'permissions']);
 
         return response()->json([
