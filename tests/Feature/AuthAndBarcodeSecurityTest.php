@@ -62,6 +62,12 @@ it('allows authenticated users with the required permission', function () {
 it('requires permission middleware on every protected business route', function () {
     $profileRoutes = [
         'api/logout',
+        'api/logout-all',
+        'api/mfa/status',
+        'api/mfa/setup',
+        'api/mfa/confirm',
+        'api/mfa/recovery-codes/regenerate',
+        'api/mfa',
         'api/me',
         'api/profile/update',
         'api/profile/change-password',

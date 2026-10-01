@@ -3,21 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\RequestPasswordOtpRequest;
+use App\Http\Requests\Api\ResetPasswordOtpRequest;
+use App\Http\Requests\Api\VerifyPasswordOtpRequest;
 use App\Mail\SendOtpMail;
 use App\Models\PasswordOtp;
 use App\Models\User;
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
 class PasswordOtpController extends Controller
 {
     // Request OTP
-    public function requestOtp(Request $request)
+    public function requestOtp(RequestPasswordOtpRequest $request): JsonResponse
     {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-        ]);
+        if (! User::query()->where('email', $request->validated('email'))->exists()) {
+            return response()->json(['message' => 'If the account exists, a reset code has been sent.']);
+        }
 
         // Delete any existing OTP for this email to prevent multiples
         PasswordOtp::where('email', $request->email)->delete();
@@ -38,23 +41,18 @@ class PasswordOtpController extends Controller
             $record->delete();
 
             return response()->json([
-                'mail_error' => $e->getMessage(),
+                'message' => 'Unable to send a reset code. Please try again later.',
             ], 500);
         }
 
         return response()->json([
-            'message' => 'OTP sent successfully',
+            'message' => 'If the account exists, a reset code has been sent.',
         ]);
     }
 
     // Verify OTP
-    public function verifyOtp(Request $request)
+    public function verifyOtp(VerifyPasswordOtpRequest $request): JsonResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-            'otp' => 'required|digits:6', // Ensure it's a 6-digit number
-        ]);
-
         $record = PasswordOtp::where('email', $request->email)->first();
 
         if (! $record) {
@@ -77,39 +75,21 @@ class PasswordOtpController extends Controller
     }
 
     // Reset Password
-    public function resetPassword(Request $request)
+    public function resetPassword(ResetPasswordOtpRequest $request): JsonResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-            'otp' => 'required|digits:6',
-            'password' => 'required|min:8|confirmed', // Strengthen min length
-        ]);
+        return (new User)->getConnection()->transaction(function () use ($request): JsonResponse {
+            $user = User::query()->where('email', $request->validated('email'))->lockForUpdate()->first();
+            $record = PasswordOtp::query()->where('email', $request->validated('email'))->lockForUpdate()->first();
 
-        $record = PasswordOtp::where('email', $request->email)->first();
+            if (! $user || ! $record || ! $record->expires_at->isFuture() || ! Hash::check((string) $request->validated('otp'), $record->otp)) {
+                return response()->json(['message' => 'Invalid or expired reset code.'], 422);
+            }
 
-        if (! $record) {
-            return response()->json(['message' => 'OTP not found'], 404);
-        }
+            $user->update(['password' => $request->validated('password')]);
+            PasswordOtp::query()->where('email', $user->email)->delete();
+            activity()->causedBy($user)->log('User reset password');
 
-        if (now()->greaterThan($record->expires_at)) {
-            $record->delete();
-
-            return response()->json(['message' => 'OTP expired'], 400);
-        }
-
-        if (! Hash::check($request->otp, $record->otp)) {
-            return response()->json(['message' => 'Invalid OTP'], 401);
-        }
-
-        $user = User::where('email', $request->email)->firstOrFail();
-
-        $user->update([
-            'password' => Hash::make($request->password),
-        ]);
-
-        // Clean up after successful reset
-        PasswordOtp::where('email', $request->email)->delete();
-
-        return response()->json(['message' => 'Password reset successful']);
+            return response()->json(['message' => 'Password reset successful. Please log in again.']);
+        });
     }
 }

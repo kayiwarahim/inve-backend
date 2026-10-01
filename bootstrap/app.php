@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureMfaIsSatisfied;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,11 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+            'mfa' => EnsureMfaIsSatisfied::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->dontFlash(['code', 'otp', 'recovery_code', 'challenge_token', 'secret', 'provisioning_uri']);
     })->create();

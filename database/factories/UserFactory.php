@@ -42,4 +42,13 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    public function withMfa(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'mfa_secret' => 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+            'mfa_confirmed_at' => now(),
+            'mfa_recovery_codes' => [],
+        ]);
+    }
 }
