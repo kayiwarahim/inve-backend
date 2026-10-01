@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\LotTransformationController;
+use App\Http\Controllers\Api\MfaController;
 use App\Http\Controllers\Api\PasswordOtpController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProcessStepController;
@@ -25,14 +26,21 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes (no auth or permissions needed)
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware(['throttle:5,1', 'throttle:login-account']);
+Route::post('/mfa/challenge', [MfaController::class, 'challenge'])->middleware('throttle:10,1,mfa-challenge:')->name('mfa.challenge');
 Route::post('/password/request-otp', [PasswordOtpController::class, 'requestOtp'])->middleware('throttle:5,1');
 Route::post('/password/verify-otp', [PasswordOtpController::class, 'verifyOtp'])->middleware('throttle:5,1');
 Route::post('/password/reset', [PasswordOtpController::class, 'resetPassword'])->middleware('throttle:5,1');
 
 // Authenticated routes
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
+Route::middleware(['auth:sanctum', 'mfa'])->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
+    Route::post('/logout-all', [AuthController::class, 'logoutAll'])->name('auth.logout-all');
+    Route::get('/mfa/status', [MfaController::class, 'status'])->name('mfa.status');
+    Route::post('/mfa/setup', [MfaController::class, 'setup'])->middleware('throttle:mfa-management')->name('mfa.setup');
+    Route::post('/mfa/confirm', [MfaController::class, 'confirm'])->middleware('throttle:mfa-management')->name('mfa.confirm');
+    Route::post('/mfa/recovery-codes/regenerate', [MfaController::class, 'regenerate'])->middleware('throttle:mfa-management')->name('mfa.regenerate');
+    Route::delete('/mfa', [MfaController::class, 'destroy'])->middleware('throttle:mfa-management')->name('mfa.destroy');
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/profile/update', [AuthController::class, 'updateProfile']);
     Route::post('/profile/change-password', [AuthController::class, 'changePassword']);
