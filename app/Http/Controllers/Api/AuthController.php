@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ChangePasswordRequest;
+use App\Http\Requests\Api\LoginRequest;
 use App\Http\Requests\Api\UpdateProfileRequest;
 use App\Models\User;
+use App\Services\AuthenticationService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +18,8 @@ use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
+    public function __construct(private AuthenticationService $authentication) {}
+
     public function register(Request $request): JsonResponse
     {
         $request->validate([
@@ -30,7 +34,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $token = $user->createToken('api-token')->plainTextToken;
+        $token = $user->createToken('api-token', ['*'], now()->addDays(config('mfa.token_days')))->plainTextToken;
 
         $user->load(['roles', 'permissions']);
 
@@ -42,42 +46,10 @@ class AuthController extends Controller
         ]);
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        }
-
-        // Optional: limit max devices to 3
-        if ($user->tokens()->count() >= 3) {
-            $user->tokens()->oldest()->first()->delete();
-        }
-
-        $token = $user->createToken(
-            'react-app',
-            ['*'],
-            now()->addDays(7) // expires in 7 days
-        );
-
-        $user->update([
-            'last_login_at' => now(),
-        ]);
-        $user->load(['roles', 'permissions']);
-
-        activity()->causedBy($user)->log('User logged in');
-
-        return response()->json([
-            'message' => 'Logged in successfully',
-            'user' => $this->formatUserAccess($user),
-            'token' => $token->plainTextToken,
-        ]);
+        return response()->json($this->authentication->login($request->validated('email'), $request->validated('password')))
+            ->header('Cache-Control', 'no-store');
     }
 
     public function me(Request $request): JsonResponse
@@ -107,20 +79,22 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! Hash::check($request->validated('current_password'), $user->password)) {
-            throw ValidationException::withMessages([
-                'current_password' => ['The current password is incorrect.'],
-            ]);
-        }
+        $user->getConnection()->transaction(function () use ($request, $user): void {
+            $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
 
-        $user->update([
-            'password' => $request->validated('password'),
-        ]);
+            if (! Hash::check($request->validated('current_password'), $lockedUser->password)) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['The current password is incorrect.'],
+                ]);
+            }
+
+            $lockedUser->update(['password' => $request->validated('password')]);
+        });
 
         activity()->causedBy($user)->log('User changed password');
 
         return response()->json([
-            'message' => 'Password changed successfully.',
+            'message' => 'Password changed successfully. Please log in again.',
         ]);
     }
 
@@ -135,7 +109,11 @@ class AuthController extends Controller
 
     public function logoutAll(Request $request): JsonResponse
     {
-        $request->user()->tokens()->delete();
+        $request->user()->getConnection()->transaction(function () use ($request): void {
+            $user = User::query()->lockForUpdate()->findOrFail($request->user()->id);
+            $user->tokens()->delete();
+            $user->forceFill(['mfa_challenge_hash' => null, 'mfa_challenge_expires_at' => null, 'mfa_challenge_attempts' => 0])->save();
+        });
 
         activity()->causedBy($request->user())->log('User logged out from all devices');
 
@@ -175,6 +153,7 @@ class AuthController extends Controller
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
             'last_login_at' => $user->last_login_at,
+            'mfa_enabled' => $user->hasMfaEnabled(),
         ];
     }
 
@@ -195,6 +174,7 @@ class AuthController extends Controller
             'direct_permissions' => $user->permissions,
             'permissions' => $effectivePermissionsCollection,
             'effective_permissions' => $effectivePermissionNames,
+            'mfa_enabled' => $user->hasMfaEnabled(),
         ];
     }
 }
