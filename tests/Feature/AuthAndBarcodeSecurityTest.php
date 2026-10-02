@@ -145,7 +145,7 @@ it('rate limits public auth and password endpoints', function (string $uri) {
 ]);
 
 it('does not grant admin role during public registration', function () {
-    $response = $this->postJson('/api/register', [
+    $response = $this->withHeader('Origin', 'http://localhost:5173')->postJson('/api/register', [
         'name' => 'New Operator',
         'email' => 'operator@example.com',
         'password' => 'password123',
