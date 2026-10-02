@@ -5,50 +5,37 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ChangePasswordRequest;
 use App\Http\Requests\Api\LoginRequest;
+use App\Http\Requests\Api\RegisterRequest;
 use App\Http\Requests\Api\UpdateProfileRequest;
 use App\Models\User;
 use App\Services\AuthenticationService;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
     public function __construct(private AuthenticationService $authentication) {}
 
-    public function register(Request $request): JsonResponse
+    public function register(RegisterRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6',
-        ]);
+        $this->authentication->endSession($request);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        $payload = (new User)->getConnection()->transaction(function () use ($request): array {
+            $user = User::query()->create($request->validated());
+            activity()->causedBy($user)->log('User registered');
 
-        $token = $user->createToken('api-token', ['*'], now()->addDays(config('mfa.token_days')))->plainTextToken;
+            return $this->authentication->completeLogin($user, $request);
+        });
 
-        $user->load(['roles', 'permissions']);
-
-        activity()->causedBy($user)->log('User registered');
-
-        return response()->json([
-            'user' => $this->formatUserAccess($user),
-            'token' => $token,
-        ]);
+        return response()->json($payload)->header('Cache-Control', 'no-store');
     }
 
     public function login(LoginRequest $request): JsonResponse
     {
-        return response()->json($this->authentication->login($request->validated('email'), $request->validated('password')))
+        return response()->json($this->authentication->login($request->validated('email'), $request->validated('password'), $request))
             ->header('Cache-Control', 'no-store');
     }
 
@@ -58,7 +45,7 @@ class AuthController extends Controller
         $user = $request->user();
         $user->load(['roles', 'permissions']);
 
-        return response()->json($this->fetchUserPermissions($user));
+        return response()->json($this->fetchUserPermissions($user))->header('Cache-Control', 'no-store');
     }
 
     public function updateProfile(UpdateProfileRequest $request): JsonResponse
@@ -93,6 +80,10 @@ class AuthController extends Controller
 
         activity()->causedBy($user)->log('User changed password');
 
+        if ($request->hasSession()) {
+            $this->authentication->endSession($request);
+        }
+
         return response()->json([
             'message' => 'Password changed successfully. Please log in again.',
         ]);
@@ -100,9 +91,18 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        $token = $user->currentAccessToken();
 
-        activity()->causedBy($request->user())->log('User logged out');
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+
+        activity()->causedBy($user)->log('User logged out');
+
+        if ($request->hasSession()) {
+            $this->authentication->endSession($request);
+        }
 
         return response()->json(['message' => 'Logged out']);
     }
@@ -111,11 +111,15 @@ class AuthController extends Controller
     {
         $request->user()->getConnection()->transaction(function () use ($request): void {
             $user = User::query()->lockForUpdate()->findOrFail($request->user()->id);
-            $user->tokens()->delete();
+            $user->revokeAuthentication();
             $user->forceFill(['mfa_challenge_hash' => null, 'mfa_challenge_expires_at' => null, 'mfa_challenge_attempts' => 0])->save();
         });
 
         activity()->causedBy($request->user())->log('User logged out from all devices');
+
+        if ($request->hasSession()) {
+            $this->authentication->endSession($request);
+        }
 
         return response()->json(['message' => 'Logged out from all devices']);
     }
@@ -133,10 +137,8 @@ class AuthController extends Controller
      *     updated_at: mixed,
      *     last_login_at: mixed,
      *     branch_id: mixed,
-     *     roles: Collection<int, Role>,
-     *     direct_permissions: Collection<int, Permission>,
-     *     permissions: Collection<int, Permission>,
-     *     effective_permissions: array<int, string>
+     *     role: string|null,
+     *     mfa_enabled: bool
      * }
      */
     private function formatUserAccess(User $user): array
@@ -168,13 +170,11 @@ class AuthController extends Controller
             ->all();
 
         return [
-            'name' => $user->name,
-            'email' => $user->email,
+            ...$this->formatUserAccess($user),
             'roles' => $user->roles,
             'direct_permissions' => $user->permissions,
             'permissions' => $effectivePermissionsCollection,
             'effective_permissions' => $effectivePermissionNames,
-            'mfa_enabled' => $user->hasMfaEnabled(),
         ];
     }
 }
