@@ -7,5 +7,4 @@ return [
     'challenge_minutes' => 5,
     'challenge_attempts' => 5,
     'recovery_code_count' => 10,
-    'token_days' => 7,
 ];

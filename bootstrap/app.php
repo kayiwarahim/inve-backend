@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AddContentSecurityPolicy;
 use App\Http\Middleware\EnsureMfaIsSatisfied;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->statefulApi();
+        $middleware->prepend(AddContentSecurityPolicy::class);
+
         $middleware->alias([
             'mfa' => EnsureMfaIsSatisfied::class,
             'role' => RoleMiddleware::class,

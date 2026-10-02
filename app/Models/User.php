@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\Models\Concerns\CausesActivity;
 use Spatie\Permission\Traits\HasRoles;
@@ -41,6 +42,7 @@ class User extends Authenticatable
         static::updating(function (User $user): void {
             if ($user->isDirty('password')) {
                 $user->tokens()->delete();
+                $user->setRememberToken(Str::random(60));
                 $user->forceFill([
                     'mfa_challenge_hash' => null,
                     'mfa_challenge_expires_at' => null,
@@ -107,6 +109,13 @@ class User extends Authenticatable
         $roles = config('mfa.required_roles', []);
 
         return $roles !== [] && $this->hasAnyRole($roles);
+    }
+
+    public function revokeAuthentication(): void
+    {
+        $this->tokens()->delete();
+        $this->setRememberToken(Str::random(60));
+        $this->save();
     }
 
     public function performedLotTransformations(): HasMany
