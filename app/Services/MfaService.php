@@ -66,7 +66,7 @@ class MfaService
             ]);
             $this->clearChallenge($user);
             $user->save();
-            $user->tokens()->delete();
+            $user->revokeAuthentication();
             activity()->causedBy($user)->log('MFA enabled');
 
             return ['message' => 'MFA enabled. Save your recovery codes and log in again.', 'recovery_codes' => $codes];
@@ -103,7 +103,7 @@ class MfaService
 
             $this->clearChallenge($user);
             $user->save();
-            $user->tokens()->delete();
+            $user->revokeAuthentication();
             activity()->causedBy($user)->log($disable ? 'MFA disabled' : 'MFA recovery codes regenerated');
 
             return $disable

@@ -35,7 +35,10 @@ class MfaController extends Controller
 
     public function confirm(MfaConfirmRequest $request): JsonResponse
     {
-        return $this->respond($this->mfa->confirm($request->user(), $request->validated('code')));
+        $payload = $this->mfa->confirm($request->user(), $request->validated('code'));
+        $this->endSession($request);
+
+        return $this->respond($payload);
     }
 
     public function challenge(MfaChallengeRequest $request): JsonResponse
@@ -44,17 +47,31 @@ class MfaController extends Controller
             $request->validated('challenge_token'),
             $request->validated('code'),
             $request->validated('recovery_code'),
+            $request,
         ));
     }
 
     public function regenerate(MfaManageRequest $request): JsonResponse
     {
-        return $this->respond($this->mfa->manage($request->user(), $request->validated(), false));
+        $payload = $this->mfa->manage($request->user(), $request->validated(), false);
+        $this->endSession($request);
+
+        return $this->respond($payload);
     }
 
     public function destroy(MfaManageRequest $request): JsonResponse
     {
-        return $this->respond($this->mfa->manage($request->user(), $request->validated(), true));
+        $payload = $this->mfa->manage($request->user(), $request->validated(), true);
+        $this->endSession($request);
+
+        return $this->respond($payload);
+    }
+
+    private function endSession(Request $request): void
+    {
+        if ($request->hasSession()) {
+            $this->authentication->endSession($request);
+        }
     }
 
     private function respond(array $payload): JsonResponse

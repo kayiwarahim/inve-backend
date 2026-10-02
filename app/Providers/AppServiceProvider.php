@@ -46,7 +46,7 @@ class AppServiceProvider extends ServiceProvider
         });
         RateLimiter::for('mfa-management', fn (Request $request): array => [
             Limit::perMinute(5)->by('user:'.$request->user()->id),
-            Limit::perMinute(20)->by('ip:'.$request->ip()),
+            Limit::perMinute(5)->by('ip:'.$request->ip()),
         ]);
 
         Event::listen(RequestHandled::class, function (RequestHandled $event): void {

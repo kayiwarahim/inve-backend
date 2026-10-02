@@ -1,0 +1,95 @@
+version: 2
+updates:
+    # Enable version updates for npm dependencies
+    - package-ecosystem: 'npm'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+          day: 'monday'
+          time: '09:00'
+          timezone: 'Africa/Nairobi'
+      open-pull-requests-limit: 10
+      reviewers:
+          - 'kayiwarahim'
+      assignees:
+          - 'kayiwarahim'
+      labels:
+          - 'dependencies'
+          - 'npm'
+      commit-message:
+          prefix: 'chore'
+          prefix-development: 'chore'
+          include: 'scope'
+      # Group updates by dependency type
+      groups:
+          # Group all React-related dependencies
+          react:
+              patterns:
+                  - 'react*'
+                  - '@types/react*'
+          # Group all TypeScript-related dependencies
+          typescript:
+              patterns:
+                  - 'typescript'
+                  - '@typescript-eslint/*'
+                  - '@types/*'
+          # Group all Vite-related dependencies
+          vite:
+              patterns:
+                  - 'vite*'
+                  - '@vitejs/*'
+          # Group all Tailwind-related dependencies
+          tailwind:
+              patterns:
+                  - 'tailwindcss'
+                  - 'postcss'
+                  - 'autoprefixer'
+          # Group all ESLint-related dependencies
+          eslint:
+              patterns:
+                  - 'eslint*'
+          # Group all testing dependencies
+          testing:
+              patterns:
+                  - '*jest*'
+                  - '*test*'
+                  - 'vitest'
+          # Group all animation/UI libraries
+          ui-libraries:
+              patterns:
+                  - 'framer-motion'
+                  - 'lucide-react'
+                  - 'recharts'
+      # Ignore specific dependencies if needed
+      ignore:
+          # Ignore major version updates for stable dependencies
+          - dependency-name: 'react'
+            update-types: ['version-update:semver-major']
+          - dependency-name: 'react-dom'
+            update-types: ['version-update:semver-major']
+      # Allow both direct and indirect dependencies
+      allow:
+          - dependency-type: 'direct'
+          - dependency-type: 'indirect'
+      # Rebase strategy for pull requests
+      rebase-strategy: 'auto'
+      # Target branch for pull requests
+      target-branch: 'main'
+
+    # Enable version updates for GitHub Actions
+    - package-ecosystem: 'github-actions'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+          day: 'monday'
+          time: '09:00'
+          timezone: 'Africa/Nairobi'
+      open-pull-requests-limit: 5
+      reviewers:
+          - 'kayiwarahim'
+      labels:
+          - 'dependencies'
+          - 'github-actions'
+      commit-message:
+          prefix: 'ci'
+          include: 'scope'

@@ -18,7 +18,8 @@ use Spatie\Permission\Models\Role;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    config(['mfa.required_roles' => [], 'app.key' => 'base64:'.base64_encode(str_repeat('a', 32))]);
+    config(['mfa.required_roles' => [], 'session.driver' => 'database', 'sanctum.stateful' => ['localhost:5173'], 'app.key' => 'base64:'.base64_encode(str_repeat('a', 32))]);
+    app()->instance('testing.mfa.cookies', []);
     $this->app->bind(Google2FA::class, fn (): Google2FA => new class extends Google2FA
     {
         public function getTimestamp(): int
@@ -32,13 +33,21 @@ beforeEach(function () {
 function mfaApi(string $method, string $uri, array $data = [], ?string $token = null): TestResponse
 {
     app('auth')->forgetGuards();
-    test()->flushHeaders();
+    app('session')->forgetDrivers();
+    app()->forgetInstance('session.store');
 
-    if ($token !== null) {
-        test()->withToken($token);
+    $response = test()->call($method, '/api'.$uri, [], $token === null ? app('testing.mfa.cookies') : [], [], [
+        'HTTP_ACCEPT' => 'application/json',
+        'HTTP_ORIGIN' => 'http://localhost:5173',
+        'HTTP_AUTHORIZATION' => $token === null ? '' : 'Bearer '.$token,
+        'CONTENT_TYPE' => 'application/json',
+    ], json_encode($data));
+
+    if ($token === null) {
+        app()->instance('testing.mfa.cookies', [config('session.cookie') => $response->getCookie(config('session.cookie'), false)?->getValue()]);
     }
 
-    return test()->json($method, '/api'.$uri, $data);
+    return $response;
 }
 
 function mfaCode(string $secret): string
@@ -94,23 +103,24 @@ it('rejects expired and invalid enrollment codes without enabling MFA', function
     expect($user->fresh()->hasMfaEnabled())->toBeFalse();
 });
 
-it('requires the second factor before issuing a usable token and keeps permissions enforced', function () {
+it('requires the second factor before establishing a session and keeps permissions enforced', function () {
     $user = mfaUser();
     $challenge = mfaChallenge($user);
     expect($user->tokens()->count())->toBe(0)
         ->and($user->fresh()->last_login_at)->toBeNull();
     mfaApi('GET', '/me', [], $challenge)->assertUnauthorized();
     $response = mfaApi('POST', '/mfa/challenge', ['challenge_token' => $challenge, 'code' => mfaCode($user->mfa_secret)])->assertOk();
-    $token = $response->json('token');
+    $response->assertJsonMissingPath('token');
+    $sessionCookie = $response->getCookie(config('session.cookie'), false)->getValue();
     expect($user->fresh()->last_login_at)->not->toBeNull()
         ->and($user->fresh()->mfa_challenge_hash)->toBeNull();
-    mfaApi('GET', '/me', [], $token)->assertOk()->assertJsonPath('mfa_enabled', true);
-    mfaApi('GET', '/products', [], $token)->assertForbidden();
+    mfaApi('GET', '/me')->assertOk()->assertJsonPath('mfa_enabled', true);
+    mfaApi('GET', '/products')->assertForbidden();
     Permission::create(['name' => 'products.view', 'guard_name' => 'api']);
     $user->givePermissionTo('products.view');
-    mfaApi('GET', '/products', [], $token)->assertOk();
+    mfaApi('GET', '/products')->assertOk();
     mfaApi('POST', '/mfa/challenge', ['challenge_token' => $challenge, 'code' => mfaCode($user->mfa_secret)])->assertUnprocessable();
-    expect(Activity::query()->get()->toJson())->not->toContain($challenge)->not->toContain($token);
+    expect(Activity::query()->get()->toJson())->not->toContain($challenge)->not->toContain($sessionCookie);
 });
 
 it('does not reveal an MFA challenge for an incorrect password', function () {
@@ -138,6 +148,7 @@ it('invalidates a challenge after five failed attempts', function () {
     }
 
     expect($user->fresh()->mfa_challenge_hash)->toBeNull();
+    $this->travel(61)->seconds();
     mfaApi('POST', '/mfa/challenge', ['challenge_token' => $challenge, 'code' => mfaCode($user->mfa_secret)])->assertUnprocessable();
 });
 
@@ -159,7 +170,7 @@ it('prevents authenticator code reuse across separate challenges', function () {
     mfaApi('POST', '/mfa/challenge', ['challenge_token' => mfaChallenge($user), 'code' => $code])->assertOk();
     Cache::flush();
     mfaApi('POST', '/mfa/challenge', ['challenge_token' => mfaChallenge($user), 'code' => $code])->assertUnprocessable();
-    expect($user->tokens()->count())->toBe(1);
+    expect($user->tokens()->count())->toBe(0);
 });
 
 it('consumes a recovery code only once', function () {
@@ -185,13 +196,13 @@ it('rejects legacy wildcard tokens for an MFA-enabled user', function () {
     mfaApi('POST', '/logout', [], $legacy)->assertOk();
 });
 
-it('keeps non-MFA login compatible and expires new tokens after seven days', function () {
+it('logs in without a bearer token and expires idle sessions', function () {
     $user = User::factory()->create();
-    $response = mfaApi('POST', '/login', ['email' => $user->email, 'password' => 'password'])->assertOk();
-    mfaApi('GET', '/me', [], $response->json('token'))->assertOk();
-    expect($user->tokens()->first()->expires_at->equalTo(now()->addDays(7)))->toBeTrue();
-    $this->travel(8)->days();
-    mfaApi('GET', '/me', [], $response->json('token'))->assertUnauthorized();
+    mfaApi('POST', '/login', ['email' => $user->email, 'password' => 'password'])->assertOk()->assertJsonMissingPath('token');
+    mfaApi('GET', '/me')->assertOk();
+    expect($user->tokens()->count())->toBe(0);
+    $this->travel(config('session.lifetime') + 1)->minutes();
+    mfaApi('GET', '/me')->assertUnauthorized();
 });
 
 it('restricts required roles to enrollment until MFA is confirmed', function () {

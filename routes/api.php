@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Route;
 // Public routes (no auth or permissions needed)
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware(['throttle:5,1', 'throttle:login-account']);
-Route::post('/mfa/challenge', [MfaController::class, 'challenge'])->middleware('throttle:10,1,mfa-challenge:')->name('mfa.challenge');
+Route::post('/mfa/challenge', [MfaController::class, 'challenge'])->middleware('throttle:5,1,mfa-challenge:')->name('mfa.challenge');
 Route::post('/password/request-otp', [PasswordOtpController::class, 'requestOtp'])->middleware('throttle:5,1');
 Route::post('/password/verify-otp', [PasswordOtpController::class, 'verifyOtp'])->middleware('throttle:5,1');
 Route::post('/password/reset', [PasswordOtpController::class, 'resetPassword'])->middleware('throttle:5,1');
