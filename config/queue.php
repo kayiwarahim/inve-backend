@@ -31,6 +31,16 @@ return [
 
     'connections' => [
 
+        'database-backups' => [
+            'driver' => 'database',
+            'connection' => 'backup-control',
+            'table' => 'jobs',
+            'queue' => 'database-backups',
+            'retry_after' => 3660,
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
         'sync' => [
             'driver' => 'sync',
         ],
