@@ -1,21 +1,21 @@
 name: Dependency Audit
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+    push:
+        branches:
+            - main
+    pull_request:
 
 jobs:
-  audit:
-    runs-on: ubuntu-latest
+    audit:
+        runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
 
-      - run: npm ci
-      - run: npm audit --audit-level=moderate
+            - run: npm ci
+            - run: npm audit --audit-level=moderate
