@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AddContentSecurityPolicy;
+use App\Http\Middleware\EnsureDatabaseIsAvailable;
 use App\Http\Middleware\EnsureMfaIsSatisfied;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
         $middleware->prepend(AddContentSecurityPolicy::class);
+        $middleware->prepend(EnsureDatabaseIsAvailable::class);
 
         $middleware->alias([
             'mfa' => EnsureMfaIsSatisfied::class,

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\BarcodeService;
+use App\Services\DatabaseBackupService;
 use BackedEnum;
 use DateTimeInterface;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -50,54 +51,76 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         Event::listen(RequestHandled::class, function (RequestHandled $event): void {
-            $request = $event->request;
-            $response = $event->response;
+            $lock = fopen(app(DatabaseBackupService::class)->path('traffic.lock'), 'c+');
+            if ($lock === false || ! flock($lock, LOCK_SH | LOCK_NB)) {
+                if (is_resource($lock)) {
+                    fclose($lock);
+                }
 
-            if (! $request->is('api/*')) {
                 return;
             }
-
-            $route = $request->route();
-
-            $payload = $this->sanitizeForActivityLog($request->all());
-
-            $auditable = null;
-            $auditableId = null;
-
-            foreach (($route?->parameters() ?? []) as $parameter) {
-                if ($parameter instanceof Model) {
-                    $auditable = $parameter;
-                    $auditableId = $parameter->getKey();
-
-                    break;
-                }
-
-                if (is_numeric($parameter)) {
-                    $auditableId = (int) $parameter;
-                    break;
-                }
-            }
-
             try {
-                $causer = $request->user();
-
-                $logger = activity('audit')
-                    ->event('request')
-                    ->createdAt(now())
-                    ->withProperties($this->activityProperties($request, $response, $route, $auditable, $auditableId, $causer, $payload));
-
-                if ($auditable instanceof Model) {
-                    $logger->performedOn($auditable);
-                }
-
-                if ($causer instanceof Model) {
-                    $logger->causedBy($causer);
-                }
-
-                $logger->log($request->method().' '.$request->path());
-            } catch (Throwable) {
+                $this->logApiRequest($event);
+            } finally {
+                flock($lock, LOCK_UN);
+                fclose($lock);
             }
         });
+    }
+
+    private function logApiRequest(RequestHandled $event): void
+    {
+        $request = $event->request;
+        $response = $event->response;
+
+        if (is_file(config('database-backups.path').DIRECTORY_SEPARATOR.'restoring')) {
+            return;
+        }
+
+        if (! $request->is('api/*')) {
+            return;
+        }
+
+        $route = $request->route();
+
+        $payload = $this->sanitizeForActivityLog($request->all());
+
+        $auditable = null;
+        $auditableId = null;
+
+        foreach (($route?->parameters() ?? []) as $parameter) {
+            if ($parameter instanceof Model) {
+                $auditable = $parameter;
+                $auditableId = $parameter->getKey();
+
+                break;
+            }
+
+            if (is_numeric($parameter)) {
+                $auditableId = (int) $parameter;
+                break;
+            }
+        }
+
+        try {
+            $causer = $request->user();
+
+            $logger = activity('audit')
+                ->event('request')
+                ->createdAt(now())
+                ->withProperties($this->activityProperties($request, $response, $route, $auditable, $auditableId, $causer, $payload));
+
+            if ($auditable instanceof Model) {
+                $logger->performedOn($auditable);
+            }
+
+            if ($causer instanceof Model) {
+                $logger->causedBy($causer);
+            }
+
+            $logger->log($request->method().' '.$request->path());
+        } catch (Throwable) {
+        }
     }
 
     /**

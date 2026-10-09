@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BarcodeController;
 use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DatabaseBackupController;
 use App\Http\Controllers\Api\LotTransformationController;
 use App\Http\Controllers\Api\MfaController;
 use App\Http\Controllers\Api\PasswordOtpController;
@@ -34,6 +35,12 @@ Route::post('/password/reset', [PasswordOtpController::class, 'resetPassword'])-
 
 // Authenticated routes
 Route::middleware(['auth:sanctum', 'mfa'])->group(function () {
+    Route::get('/database-backups', [DatabaseBackupController::class, 'index'])->middleware('permission:backups.view,api');
+    Route::post('/database-backups', [DatabaseBackupController::class, 'store'])->middleware(['permission:backups.create,api', 'throttle:2,1']);
+    Route::post('/database-backups/uploads', [DatabaseBackupController::class, 'upload'])->middleware(['permission:backups.restore,api', 'throttle:2,1']);
+    Route::get('/database-backups/{backup}/download', [DatabaseBackupController::class, 'download'])->whereUuid('backup')->middleware('permission:backups.download,api');
+    Route::post('/database-backups/{backup}/restore', [DatabaseBackupController::class, 'restore'])->whereUuid('backup')->middleware(['permission:backups.restore,api', 'throttle:2,1']);
+    Route::get('/database-operations/{operation}', [DatabaseBackupController::class, 'operation'])->whereUuid('operation')->middleware('permission:backups.view,api');
     Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
     Route::post('/logout-all', [AuthController::class, 'logoutAll'])->name('auth.logout-all');
     Route::get('/mfa/status', [MfaController::class, 'status'])->name('mfa.status');
