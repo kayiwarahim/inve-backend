@@ -12,6 +12,7 @@ class RolePermissionSeeder extends Seeder
     {
         // All permissions used in routes
         $permissions = [
+            'backups.view', 'backups.create', 'backups.download', 'backups.restore',
             // Products
             'products.view', 'products.create', 'products.edit', 'products.delete',
 
