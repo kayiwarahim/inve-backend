@@ -58,6 +58,10 @@ jobs:
             - name: Set directory permissions
               run: chmod -R 777 storage bootstrap/cache
 
+            - name: Debug backup DB path
+              run: |
+                php artisan config:clear
+                php artisan tinker --execute="dump(config('database.connections.backup-control.database'));"
             - name: Run migrations
               env:
                   DB_CONNECTION: mysql
@@ -66,7 +70,7 @@ jobs:
                   DB_DATABASE: laravel
                   DB_USERNAME: root
                   DB_PASSWORD: root
-                  BACKUP_DB_PATH: database/backup-control.sqlite
+                  DATABASE_BACKUP_CONTROL_DATABASE: storage/app/database-backups/queue.sqlite
               run: php artisan migrate --force
 
             - name: Run tests
