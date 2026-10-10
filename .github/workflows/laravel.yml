@@ -66,6 +66,7 @@ jobs:
                   DB_DATABASE: laravel
                   DB_USERNAME: root
                   DB_PASSWORD: root
+                  BACKUP_DB_PATH: database/backup-control.sqlite
               run: php artisan migrate --force
 
             - name: Run tests
@@ -76,4 +77,5 @@ jobs:
                   DB_DATABASE: laravel
                   DB_USERNAME: root
                   DB_PASSWORD: root
+                  BACKUP_DB_PATH: database/backup-control.sqlite
               run: php artisan test
