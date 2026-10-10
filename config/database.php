@@ -34,7 +34,7 @@ return [
 
         'backup-control' => [
             'driver' => 'sqlite',
-            'database' => env('DATABASE_BACKUP_CONTROL_DATABASE', storage_path('app/database-backups/queue.sqlite')),
+            'database' => env('DATABASE_BACKUP_CONTROL_DATABASE') ?: storage_path('app/database-backups/queue.sqlite'),
             'prefix' => '',
             'foreign_key_constraints' => true,
             'busy_timeout' => 5000,

@@ -23,6 +23,48 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 uses(RefreshDatabase::class);
 
+it('uses backup defaults when optional environment settings are blank', function () {
+    $settings = [
+        'DATABASE_BACKUP_QUEUE_CONNECTION',
+        'DATABASE_BACKUP_DUMP_BINARY',
+        'DATABASE_BACKUP_RESTORE_BINARY',
+        'DATABASE_BACKUP_CONTROL_DATABASE',
+        'DATABASE_BACKUP_MAX_UPLOAD_KB',
+        'DATABASE_BACKUP_MAX_SQL_BYTES',
+    ];
+    $previous = [];
+    try {
+        foreach ($settings as $setting) {
+            $previous[$setting] = [$_ENV[$setting] ?? null, $_SERVER[$setting] ?? null, getenv($setting)];
+            $_ENV[$setting] = '';
+            $_SERVER[$setting] = '';
+            putenv($setting.'=');
+        }
+        $backups = require config_path('database-backups.php');
+        $database = require config_path('database.php');
+        expect($backups['max_sql_bytes'])->toBe(1073741824)
+            ->and($backups['max_upload_kb'])->toBe(262144)
+            ->and($backups['queue_connection'])->toBe('database-backups')
+            ->and($backups['dump_binary'])->not->toBeEmpty()
+            ->and($backups['restore_binary'])->not->toBeEmpty()
+            ->and($database['connections']['backup-control']['database'])->toBe(storage_path('app/database-backups/queue.sqlite'));
+    } finally {
+        foreach ($previous as $setting => [$envValue, $serverValue, $processValue]) {
+            if ($envValue === null) {
+                unset($_ENV[$setting]);
+            } else {
+                $_ENV[$setting] = $envValue;
+            }
+            if ($serverValue === null) {
+                unset($_SERVER[$setting]);
+            } else {
+                $_SERVER[$setting] = $serverValue;
+            }
+            putenv($processValue === false ? $setting : $setting.'='.$processValue);
+        }
+    }
+});
+
 beforeEach(function (): void {
     config(['database-backups.path' => storage_path('framework/testing/backups-'.Str::uuid())]);
     $this->backups = app(DatabaseBackupService::class);
