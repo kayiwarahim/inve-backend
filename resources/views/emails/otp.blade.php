@@ -78,7 +78,7 @@
             <p>If you didn't request this, please ignore this email.</p>
         </div>
         <div class="footer">
-            <p>&copy; {{ date('Y') }} <a href="{{ url('https://trackflow.alrahimnation.software') }}">Track Flow</a>. All rights reserved.</p>
+            <p>&copy; {{ date('Y') }} <a href="{{ env('FRONTEND_URL') }}">{{ env('APP_NAME') }}</a>. All rights reserved.</p>
         </div>
     </div>
 </body>
