@@ -109,6 +109,20 @@ These items describe implemented code and existing test coverage; they are not a
 
 ## Setup
 
+After configuring the database values in `.env`, the repository's setup script can
+complete the standard install:
+
+```bash
+composer run setup
+```
+
+The script installs PHP dependencies, creates `.env` when needed, generates the
+application key, runs migrations, installs Node dependencies, and builds the
+frontend assets. It uses `php artisan migrate --force`, so configure the database
+before running it.
+
+For a step-by-step setup, use:
+
 ```bash
 composer install
 npm install
